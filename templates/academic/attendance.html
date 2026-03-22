@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Asistencia{% endblock %}
+{% block content %}
+
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+  <a href="{{ url_for('academic.index') }}" style="color:#475569;text-decoration:none;font-size:14px;">Academico</a>
+  <span style="color:#334155;">/</span>
+  <h1 class="font-display" style="font-size:20px;font-weight:700;color:#E2E8F0;margin:0;">Asistencia</h1>
+</div>
+
+<div class="card" style="padding:16px;margin-bottom:16px;">
+  <form method="GET" id="att-form" style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;">
+    <div>
+      <label class="form-label">Grado / Año</label>
+      <select name="course_id" class="form-input" style="min-width:180px;"
+              onchange="document.getElementById('att-form').submit()">
+        <option value="">Seleccionar...</option>
+        {% if primary %}
+        <optgroup label="— Primaria —">
+          {% for c in primary %}
+          <option value="{{ c.id }}" {% if course_id == c.id|string %}selected{% endif %}>
+            {{ c.name }}
+          </option>
+          {% endfor %}
+        </optgroup>
+        {% endif %}
+        {% if secondary %}
+        <optgroup label="— Secundaria —">
+          {% for c in secondary %}
+          <option value="{{ c.id }}" {% if course_id == c.id|string %}selected{% endif %}>
+            {{ c.name }}
+          </option>
+          {% endfor %}
+        </optgroup>
+        {% endif %}
+      </select>
+    </div>
+    {% if course_id %}
+    <div>
+      <label class="form-label">Fecha</label>
+      <input type="date" name="date" value="{{ att_date }}"
+             class="form-input" onchange="this.form.submit()">
+    </div>
+    {% else %}
+    <input type="hidden" name="date" value="{{ att_date }}">
+    {% endif %}
+  </form>
+</div>
+
+{% if not course_id %}
+<div class="card" style="padding:32px;text-align:center;color:#475569;font-size:14px;">
+  Selecciona un grado o año para registrar asistencia.
+</div>
+{% elif not students %}
+<div class="card" style="padding:24px;color:#475569;font-size:14px;">
+  No hay estudiantes asignados a este grado.
+  <a href="{{ url_for('academic.assign_section') }}" style="color:var(--gold);margin-left:6px;">Asignar estudiantes</a>
+</div>
+{% else %}
+
+<form method="POST">
+  <input type="hidden" name="course_id" value="{{ course_id }}">
+  <input type="hidden" name="date" value="{{ att_date }}">
+
+  <div class="card" style="overflow:hidden;">
+    <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:13px;font-weight:700;color:#E2E8F0;font-family:'Syne',sans-serif;">
+        {{ att_date }} — {{ students|length }} estudiante(s)
+      </span>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <label style="font-size:12px;color:#475569;cursor:pointer;display:flex;align-items:center;gap:5px;">
+          <input type="checkbox" id="mark-all" style="cursor:pointer;">
+          Marcar todos presentes
+        </label>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="text-align:left;">Estudiante</th>
+          <th style="text-align:center;width:80px;">Presente</th>
+          <th style="text-align:center;width:80px;">Justificado</th>
+          <th>Observacion</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for stu in students %}
+        {% set att = att_map.get(stu.id) %}
+        <tr>
+          <td>
+            <div style="font-size:13px;font-weight:600;color:#E2E8F0;">
+              {{ stu.last_name }}, {{ stu.first_name }}
+            </div>
+          </td>
+          <td style="text-align:center;">
+            <input type="checkbox" name="present_{{ stu.id }}"
+              class="present-check"
+              {% if att and att.present %}checked{% elif not att %}checked{% endif %}
+              style="width:16px;height:16px;cursor:pointer;accent-color:var(--gold);">
+          </td>
+          <td style="text-align:center;">
+            <input type="checkbox" name="justified_{{ stu.id }}"
+              {% if att and att.justified %}checked{% endif %}
+              style="width:16px;height:16px;cursor:pointer;accent-color:#60A5FA;">
+          </td>
+          <td>
+            <input type="text" name="note_{{ stu.id }}"
+              value="{{ att.note if att and att.note else '' }}"
+              class="form-input"
+              style="padding:5px 10px;font-size:12px;"
+              placeholder="—">
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin-top:12px;display:flex;gap:10px;">
+    <button type="submit" class="btn-primary" style="padding:11px 28px;">Guardar asistencia</button>
+    <a href="{{ url_for('academic.attendance', course_id=course_id, date=att_date) }}"
+       class="btn-secondary" style="text-decoration:none;padding:11px 20px;">Cancelar</a>
+  </div>
+</form>
+{% endif %}
+
+<script>
+var markAll = document.getElementById('mark-all');
+if (markAll) {
+  markAll.addEventListener('change', function() {
+    document.querySelectorAll('.present-check').forEach(function(cb) {
+      cb.checked = markAll.checked;
+    });
+  });
+}
+</script>
+{% endblock %}

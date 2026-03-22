@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Reportes{% endblock %}
+{% block content %}
+<h1 class="font-display" style="font-size:22px;font-weight:700;color:#E2E8F0;margin:0 0 24px;">Centro de Reportes</h1>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px;">
+  <!-- Constancia -->
+  <div class="card" style="padding:20px;">
+    <div style="color:var(--gold);margin-bottom:12px;">
+      <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    </div>
+    <div style="font-size:15px;font-weight:700;color:#E2E8F0;font-family:'Syne',sans-serif;margin-bottom:8px;">Constancia de Estudios</div>
+    <p style="font-size:13px;color:#475569;margin:0 0 16px;">Genera constancia oficial en PDF con sello institucional</p>
+    <form method="GET" action="">
+      <label class="form-label">Estudiante</label>
+      <select name="sid" class="form-input" style="margin-bottom:12px;" onchange="this.form.action='/reportes/constancia/'+this.value">
+        <option value="">Seleccionar...</option>
+        {% for s in students %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+      </select>
+      <a id="btn_constancia" href="#" class="btn-primary" style="text-decoration:none;display:block;text-align:center;"
+        onclick="var sel=this.previousElementSibling.previousElementSibling; if(sel.value){window.location='/reportes/constancia/'+sel.value}else{alert('Selecciona estudiante')};return false;">
+        Generar PDF
+      </a>
+    </form>
+  </div>
+
+  <!-- Boletín -->
+  <div class="card" style="padding:20px;">
+    <div style="color:var(--gold);margin-bottom:12px;">
+      <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+    </div>
+    <div style="font-size:15px;font-weight:700;color:#E2E8F0;font-family:'Syne',sans-serif;margin-bottom:8px;">Boletín de Calificaciones</div>
+    <p style="font-size:13px;color:#475569;margin:0 0 16px;">Genera boletín oficial con promedio y estado por materia</p>
+    <div>
+      <label class="form-label">Estudiante</label>
+      <select id="sel_bol_student" class="form-input" style="margin-bottom:12px;">
+        <option value="">Seleccionar...</option>
+        {% for s in students %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+      </select>
+      <label class="form-label">Lapso</label>
+      <select id="sel_bol_lapso" class="form-input" style="margin-bottom:12px;">
+        <option value="">Seleccionar...</option>
+        {% for l in lapsos %}<option value="{{ l.id }}">{{ l.name }} — {{ l.year_name }}</option>{% endfor %}
+      </select>
+      <button class="btn-primary" style="width:100%;" onclick="var s=document.getElementById('sel_bol_student').value,l=document.getElementById('sel_bol_lapso').value; if(s&&l){window.location='/reportes/boletin/'+s+'/'+l}else{alert('Selecciona estudiante y lapso')}">
+        Generar Boletín
+      </button>
+    </div>
+  </div>
+
+  <!-- Info card -->
+  <div class="card" style="padding:20px;background:linear-gradient(135deg,var(--surface),var(--surface-2));">
+    <div style="font-size:13px;font-weight:600;color:var(--gold);margin-bottom:12px;">PROCESAMIENTO EN SEGUNDO PLANO</div>
+    <p style="font-size:13px;color:#94A3B8;line-height:1.7;margin:0 0 12px;">Los documentos se generan asincrónicamente. El estado se actualiza automáticamente cada 3 segundos.</p>
+    <div style="font-size:12px;color:#475569;background:var(--navy);border-radius:6px;padding:10px;">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;"><span style="width:8px;height:8px;background:#10B981;border-radius:50%;display:inline-block;"></span> DONE — Listo para descargar</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;"><span style="width:8px;height:8px;background:#F59E0B;border-radius:50%;display:inline-block;"></span> RUNNING — Procesando</div>
+      <div style="display:flex;gap:8px;align-items:center;"><span style="width:8px;height:8px;background:#EF4444;border-radius:50%;display:inline-block;"></span> ERROR — Falló la generación</div>
+    </div>
+  </div>
+</div>
+
+<!-- Task Queue -->
+<div class="card" style="overflow:hidden;">
+  <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-size:14px;font-weight:600;color:#E2E8F0;font-family:'Syne',sans-serif;">Cola de Tareas</div>
+    <button onclick="refreshTasks()" class="btn-secondary" style="font-size:12px;padding:5px 12px;">↻ Actualizar</button>
+  </div>
+  <table id="tasks_table">
+    <thead><tr><th>#</th><th>Tipo</th><th>Estado</th><th>Progreso</th><th>Creado</th><th>Acción</th></tr></thead>
+    <tbody>
+      {% for t in tasks %}
+      <tr id="task_{{ t.id }}">
+        <td style="font-family:monospace;color:#475569;">#{{ t.id }}</td>
+        <td style="font-weight:500;">{{ t.task_type }}</td>
+        <td>
+          {% if t.status=='DONE' %}<span class="badge badge-green">DONE</span>
+          {% elif t.status=='RUNNING' or t.status=='PENDING' %}<span class="badge badge-yellow">{{ t.status }}</span>
+          {% elif t.status=='ERROR' %}<span class="badge badge-red">ERROR</span>
+          {% else %}<span class="badge badge-gray">{{ t.status }}</span>{% endif %}
+        </td>
+        <td style="width:120px;">
+          <div class="progress-bar"><div class="progress-fill" style="width:{{ t.progress }}%;{% if t.status=='ERROR' %}background:#EF4444;{% endif %}"></div></div>
+        </td>
+        <td style="color:#475569;font-size:13px;">{{ t.created_at[:16] }}</td>
+        <td>
+          {% if t.status=='DONE' and t.result_path %}
+          <a href="{{ url_for('reports.download_task', task_id=t.id) }}" class="btn-primary" style="text-decoration:none;font-size:12px;padding:5px 12px;">⬇ Descargar</a>
+          {% elif t.status=='ERROR' %}
+          <span style="color:#EF4444;font-size:12px;">{{ t.error_msg[:40] if t.error_msg else 'Error' }}</span>
+          {% else %}
+          <span style="color:#475569;font-size:12px;">Procesando...</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" style="text-align:center;padding:32px;color:#475569;">Sin tareas generadas</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+function refreshTasks() {
+  location.reload();
+}
+// Auto-refresh if any task is pending/running
+var hasPending = {{ 'true' if tasks | selectattr('status', 'in', ['PENDING','RUNNING']) | list | length > 0 else 'false' }};
+if (hasPending) {
+  setTimeout(refreshTasks, 3000);
+}
+</script>
+{% endblock %}

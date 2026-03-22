@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIGE — Iniciar Sesión</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'DM Sans',sans-serif; background:#0B1629; min-height:100vh; display:flex; align-items:center; justify-content:center; }
+  h1 { font-family:'Syne',sans-serif; }
+  .glow { box-shadow: 0 0 80px rgba(201,168,76,0.08); }
+</style>
+</head>
+<body>
+<div style="position:fixed;inset:0;overflow:hidden;pointer-events:none;">
+  <div style="position:absolute;top:-200px;left:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(201,168,76,0.06) 0%,transparent 70%);"></div>
+  <div style="position:absolute;bottom:-200px;right:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(30,58,95,0.4) 0%,transparent 70%);"></div>
+</div>
+<div style="width:420px;position:relative;z-index:1;">
+  <div style="text-align:center;margin-bottom:40px;">
+    <div style="width:60px;height:60px;background:#C9A84C;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+      <svg width="30" height="30" fill="none" stroke="#0B1629" stroke-width="2.5" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </div>
+    <h1 style="font-size:28px;font-weight:800;color:#E2E8F0;letter-spacing:-0.5px;margin:0;">SIGE</h1>
+    <p style="color:#475569;font-size:14px;margin:6px 0 0;">Sistema Integral de Gestión Escolar</p>
+  </div>
+  <div class="glow" style="background:#0F1E35;border:1px solid rgba(201,168,76,0.15);border-radius:16px;padding:32px;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, msg in messages %}
+        <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#EF4444;padding:12px;border-radius:8px;margin-bottom:20px;font-size:14px;">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+    <form method="POST">
+      <div style="margin-bottom:20px;">
+        <label style="display:block;font-size:13px;font-weight:500;color:#94A3B8;margin-bottom:8px;">Usuario</label>
+        <input type="text" name="username" required autocomplete="username"
+          style="width:100%;background:#172840;border:1px solid rgba(201,168,76,0.15);color:#E2E8F0;padding:12px 16px;border-radius:10px;font-size:15px;outline:none;transition:border-color 0.2s;box-sizing:border-box;"
+          onfocus="this.style.borderColor='#C9A84C'" onblur="this.style.borderColor='rgba(201,168,76,0.15)'" placeholder="usuario">
+      </div>
+      <div style="margin-bottom:28px;">
+        <label style="display:block;font-size:13px;font-weight:500;color:#94A3B8;margin-bottom:8px;">Contraseña</label>
+        <input type="password" name="password" required autocomplete="current-password"
+          style="width:100%;background:#172840;border:1px solid rgba(201,168,76,0.15);color:#E2E8F0;padding:12px 16px;border-radius:10px;font-size:15px;outline:none;transition:border-color 0.2s;box-sizing:border-box;"
+          onfocus="this.style.borderColor='#C9A84C'" onblur="this.style.borderColor='rgba(201,168,76,0.15)'" placeholder="••••••••">
+      </div>
+      <button type="submit" style="width:100%;background:#C9A84C;color:#0B1629;font-weight:700;padding:14px;border-radius:10px;font-size:15px;border:none;cursor:pointer;font-family:'Syne',sans-serif;letter-spacing:0.5px;transition:all 0.2s;"
+        onmouseover="this.style.background='#E8C96D'" onmouseout="this.style.background='#C9A84C'">
+        INGRESAR AL SISTEMA
+      </button>
+    </form>
+  </div>
+  <p style="text-align:center;color:#334155;font-size:12px;margin-top:24px;">SIGE v1.0 — Acceso restringido al personal autorizado</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Auditoría{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+  <div>
+    <h1 class="font-display" style="font-size:22px;font-weight:700;color:#E2E8F0;margin:0;">Registro de Auditoría</h1>
+    <p style="color:#475569;font-size:13px;margin:4px 0 0;">{{ total }} eventos — registro inmutable del sistema</p>
+  </div>
+  <a href="{{ url_for('admin.index') }}" class="btn-secondary" style="text-decoration:none;font-size:13px;">← Admin</a>
+</div>
+
+<div class="card" style="padding:14px;margin-bottom:16px;">
+  <form method="GET" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+    <div><label class="form-label">Módulo</label>
+      <select name="module" class="form-input" style="width:150px;">
+        <option value="">Todos</option>
+        {% for m in modules %}<option value="{{ m.module }}" {% if module_filter==m.module %}selected{% endif %}>{{ m.module }}</option>{% endfor %}
+      </select></div>
+    <div><label class="form-label">Acción</label>
+      <select name="action" class="form-input" style="width:150px;">
+        <option value="">Todas</option>
+        {% for a in actions %}<option value="{{ a.action }}" {% if action_filter==a.action %}selected{% endif %}>{{ a.action }}</option>{% endfor %}
+      </select></div>
+    <button type="submit" class="btn-primary">Filtrar</button>
+    <a href="{{ url_for('admin.audit_log') }}" class="btn-secondary" style="text-decoration:none;">Limpiar</a>
+  </form>
+</div>
+
+<div class="card" style="overflow:hidden;">
+  <table>
+    <thead>
+      <tr><th>Timestamp</th><th>Usuario</th><th>Acción</th><th>Módulo</th><th>Entidad</th><th>ID</th><th>IP</th><th>Cambio</th></tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td style="font-family:monospace;font-size:11px;color:#475569;white-space:nowrap;">{{ log.timestamp[:19] }}</td>
+        <td style="font-weight:500;color:#94A3B8;">{{ log.username }}</td>
+        <td>
+          {% if log.action in ('INSERT','LOGIN') %}<span class="badge badge-green">{{ log.action }}</span>
+          {% elif log.action in ('DELETE','VOID') %}<span class="badge badge-red">{{ log.action }}</span>
+          {% elif log.action == 'UPDATE' %}<span class="badge badge-yellow">{{ log.action }}</span>
+          {% else %}<span class="badge badge-gray">{{ log.action }}</span>{% endif %}
+        </td>
+        <td style="color:#94A3B8;font-size:13px;">{{ log.module }}</td>
+        <td style="font-size:13px;">{{ log.entity }}</td>
+        <td style="font-family:monospace;color:#475569;font-size:12px;">{{ log.entity_id or '—' }}</td>
+        <td style="font-family:monospace;font-size:11px;color:#334155;">{{ log.ip_address or '—' }}</td>
+        <td style="max-width:180px;">
+          {% if log.old_value or log.new_value %}
+          <span title="{{ log.old_value }} → {{ log.new_value }}" style="font-size:11px;color:#475569;cursor:help;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;">
+            {% if log.old_value %}{{ log.old_value[:40] }}{% endif %}{% if log.new_value %} → {{ log.new_value[:30] }}{% endif %}
+          </span>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" style="text-align:center;padding:32px;color:#475569;">Sin registros de auditoría</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- PAGINATION -->
+{% if total > per_page %}
+<div style="display:flex;justify-content:center;gap:8px;margin-top:16px;align-items:center;">
+  {% if page > 1 %}
+  <a href="?page={{ page-1 }}&module={{ module_filter }}&action={{ action_filter }}" class="btn-secondary" style="text-decoration:none;font-size:13px;padding:6px 14px;">← Anterior</a>
+  {% endif %}
+  <span style="color:#475569;font-size:13px;">Página {{ page }} de {{ ((total / per_page) | int) + (1 if total % per_page else 0) }}</span>
+  {% if page * per_page < total %}
+  <a href="?page={{ page+1 }}&module={{ module_filter }}&action={{ action_filter }}" class="btn-secondary" style="text-decoration:none;font-size:13px;padding:6px 14px;">Siguiente →</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

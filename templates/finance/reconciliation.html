@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Conciliación Bancaria{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+  <div>
+    <h1 class="font-display" style="font-size:22px;font-weight:700;color:#E2E8F0;margin:0;">Conciliación Bancaria</h1>
+    <p style="color:#475569;font-size:13px;margin:4px 0 0;">Registro inmutable de movimientos bancarios</p>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1.5fr;gap:16px;margin-bottom:20px;">
+  <div class="card" style="padding:20px;">
+    <div style="font-size:13px;font-weight:600;color:var(--gold);margin-bottom:16px;">REGISTRAR MOVIMIENTO</div>
+    <form method="POST">
+      <input type="hidden" name="action" value="add">
+      <div style="margin-bottom:12px;"><label class="form-label">Fecha</label><input type="date" name="date" class="form-input" required></div>
+      <div style="margin-bottom:12px;"><label class="form-label">N° Referencia</label><input type="text" name="reference_num" class="form-input" required></div>
+      <div style="margin-bottom:12px;"><label class="form-label">Banco</label><input type="text" name="bank" class="form-input" required></div>
+      <div style="margin-bottom:12px;"><label class="form-label">Monto (Bs.)</label><input type="number" name="amount" step="0.01" class="form-input" required></div>
+      <div style="margin-bottom:16px;"><label class="form-label">Concepto</label><input type="text" name="concept" class="form-input" required></div>
+      <button type="submit" class="btn-primary" style="width:100%;">Registrar</button>
+    </form>
+  </div>
+  <div class="card" style="padding:20px;">
+    <div style="font-size:13px;font-weight:600;color:var(--gold);margin-bottom:16px;">PAGOS SIN CONCILIAR ({{ unmatched|length }})</div>
+    {% for p in unmatched %}
+    <form method="POST" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;padding:8px;background:var(--surface-2);border-radius:8px;">
+      <input type="hidden" name="action" value="reconcile">
+      <div style="flex:1;font-size:13px;"><div style="font-weight:500;">{{ p.payment_number }}</div><div style="color:#475569;font-size:12px;">{{ p.bank }} — {{ p.amount | currency }}</div></div>
+      <input type="hidden" name="payment_id" value="{{ p.id }}">
+      <input type="text" name="reconciliation_id" placeholder="ID registro" class="form-input" style="width:100px;">
+      <button type="submit" class="btn-secondary" style="font-size:12px;padding:5px 10px;">Conciliar</button>
+    </form>
+    {% else %}
+    <div style="color:#10B981;font-size:13px;text-align:center;padding:20px;">Todos los pagos están conciliados ✓</div>
+    {% endfor %}
+  </div>
+</div>
+<div class="card" style="overflow:hidden;">
+  <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-size:14px;font-weight:600;font-family:'Syne',sans-serif;">Movimientos Bancarios</div>
+  <table>
+    <thead><tr><th>Fecha</th><th>Referencia</th><th>Banco</th><th>Monto</th><th>Concepto</th><th>Pago</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for r in records %}
+      <tr>
+        <td>{{ r.date | date_fmt }}</td>
+        <td style="font-family:monospace;font-size:12px;color:#94A3B8;">{{ r.reference_num }}</td>
+        <td>{{ r.bank }}</td>
+        <td style="font-weight:600;color:#10B981;">{{ r.amount | currency }}</td>
+        <td style="font-size:13px;color:#94A3B8;">{{ r.concept }}</td>
+        <td style="font-size:12px;font-family:monospace;">{{ r.payment_number or "—" }}</td>
+        <td><span class="badge {% if r.reconciled %}badge-green{% else %}badge-yellow{% endif %}">{% if r.reconciled %}CONCILIADO{% else %}PENDIENTE{% endif %}</span></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" style="text-align:center;padding:24px;color:#475569;">Sin movimientos</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

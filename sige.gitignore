@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Base de Datos (Muy importante no subir los datos reales)
+*.sqlite3
+instance/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Conceptos de Cobro{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+  <h1 class="font-display" style="font-size:22px;font-weight:700;color:#E2E8F0;margin:0;">Conceptos de Cobro</h1>
+  <a href="{{ url_for('finance.index') }}" class="btn-secondary" style="text-decoration:none;font-size:13px;">← Finanzas</a>
+</div>
+<div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;">
+  <div class="card" style="padding:20px;">
+    <div style="font-size:13px;font-weight:600;color:var(--gold);margin-bottom:16px;">NUEVO CONCEPTO</div>
+    <form method="POST">
+      <input type="hidden" name="action" value="add">
+      <div style="margin-bottom:12px;"><label class="form-label">Nombre del Concepto</label><input type="text" name="name" class="form-input" required></div>
+      <div style="margin-bottom:12px;"><label class="form-label">Monto (Bs.)</label><input type="number" name="amount" step="0.01" class="form-input" required></div>
+      <div style="margin-bottom:16px;"><label class="form-label">Tipo</label>
+        <select name="recurrent" class="form-input"><option value="1">Mensual (Recurrente)</option><option value="0">Único</option></select></div>
+      <button type="submit" class="btn-primary" style="width:100%;">Agregar Concepto</button>
+    </form>
+  </div>
+  <div class="card" style="overflow:hidden;">
+    <table>
+      <thead><tr><th>Concepto</th><th>Monto</th><th>Tipo</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for c in concepts %}
+        <tr>
+          <td style="font-weight:500;">{{ c.name }}</td>
+          <td style="font-weight:600;color:#10B981;">{{ c.amount | currency }}</td>
+          <td style="color:#94A3B8;font-size:13px;">{{ "Mensual" if c.recurrent else "Único" }}</td>
+          <td><span class="badge {% if c.active %}badge-green{% else %}badge-gray{% endif %}">{% if c.active %}ACTIVO{% else %}INACTIVO{% endif %}</span></td>
+          <td>
+            <form method="POST" style="display:inline;">
+              <input type="hidden" name="action" value="toggle"><input type="hidden" name="concept_id" value="{{ c.id }}">
+              <button type="submit" class="btn-secondary" style="font-size:12px;padding:4px 10px;">Toggle</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

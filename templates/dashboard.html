@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;">
+  <div>
+    <h1 class="font-display" style="font-size:24px;font-weight:700;color:#E2E8F0;margin:0;">Panel de Control</h1>
+    <p style="color:#475569;font-size:14px;margin:4px 0 0;">Resumen del sistema — actualizado en tiempo real</p>
+  </div>
+  <div style="font-size:13px;color:#475569;background:var(--surface);border:1px solid var(--border);padding:8px 14px;border-radius:8px;">
+    Bienvenido, <span style="color:var(--gold);font-weight:600;">{{ user.full_name }}</span>
+  </div>
+</div>
+
+<!-- STAT CARDS -->
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;">
+  <div class="stat-card">
+    <div style="font-size:12px;color:#475569;font-weight:600;letter-spacing:0.05em;margin-bottom:8px;">ESTUDIANTES ACTIVOS</div>
+    <div style="font-size:36px;font-weight:800;color:#E2E8F0;font-family:'Syne',sans-serif;line-height:1;">{{ stats.activos }}</div>
+    <div style="font-size:12px;color:#10B981;margin-top:6px;">de {{ stats.total_students }} matriculados</div>
+    <div style="position:absolute;top:16px;right:16px;color:rgba(16,185,129,0.3);">
+      <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div style="font-size:12px;color:#475569;font-weight:600;letter-spacing:0.05em;margin-bottom:8px;">ESTUDIANTES MOROSOS</div>
+    <div style="font-size:36px;font-weight:800;color:#F59E0B;font-family:'Syne',sans-serif;line-height:1;">{{ stats.morosos }}</div>
+    <div style="font-size:12px;color:#F59E0B;margin-top:6px;">requieren atención</div>
+    <div style="position:absolute;top:16px;right:16px;color:rgba(245,158,11,0.3);">
+      <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div style="font-size:12px;color:#475569;font-weight:600;letter-spacing:0.05em;margin-bottom:8px;">FACTURAS PENDIENTES</div>
+    <div style="font-size:36px;font-weight:800;color:#60A5FA;font-family:'Syne',sans-serif;line-height:1;">{{ stats.pending_invoices }}</div>
+    <div style="font-size:12px;color:#60A5FA;margin-top:6px;">por cobrar</div>
+    <div style="position:absolute;top:16px;right:16px;color:rgba(96,165,250,0.3);">
+      <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div style="font-size:12px;color:#475569;font-weight:600;letter-spacing:0.05em;margin-bottom:8px;">INGRESOS DEL MES</div>
+    <div style="font-size:28px;font-weight:800;color:#10B981;font-family:'Syne',sans-serif;line-height:1;">{{ stats.monthly_income | currency }}</div>
+    <div style="font-size:12px;color:#475569;margin-top:6px;">recaudado este mes</div>
+    <div style="position:absolute;top:16px;right:16px;color:rgba(16,185,129,0.3);">
+      <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+    </div>
+  </div>
+  <div class="stat-card" style="grid-column:span 2;">
+    <div style="font-size:12px;color:#475569;font-weight:600;letter-spacing:0.05em;margin-bottom:8px;">DEUDA TOTAL PENDIENTE</div>
+    <div style="font-size:28px;font-weight:800;color:#EF4444;font-family:'Syne',sans-serif;line-height:1;">{{ stats.total_debt | currency }}</div>
+    <div style="font-size:12px;color:#475569;margin-top:6px;">saldo por cobrar en todas las facturas</div>
+    <div style="margin-top:12px;">
+      <div class="progress-bar">
+        {% set debt_pct = [((stats.total_debt / (stats.monthly_income + stats.total_debt + 1)) * 100) | int, 100] | min %}
+        <div class="progress-fill" style="width:{{ debt_pct }}%;background:#EF4444;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM GRID -->
+<div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;">
+  <!-- Recent Payments -->
+  <div class="card" style="padding:20px;">
+    <div style="font-size:14px;font-weight:600;color:#E2E8F0;margin-bottom:16px;font-family:'Syne',sans-serif;">Pagos Recientes</div>
+    <table>
+      <thead><tr><th>Estudiante</th><th>Monto</th><th>Método</th><th>Fecha</th></tr></thead>
+      <tbody>
+        {% for p in stats.recent_payments %}
+        <tr>
+          <td style="font-weight:500;">{{ p.student_name }}</td>
+          <td style="color:#10B981;font-weight:600;">{{ p.amount | currency }}</td>
+          <td><span class="badge badge-blue">{{ p.payment_method }}</span></td>
+          <td style="color:#475569;">{{ p.payment_date | date_fmt }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="color:#475569;text-align:center;padding:24px;">Sin pagos registrados</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <!-- Morosos -->
+  <div class="card" style="padding:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-size:14px;font-weight:600;color:#E2E8F0;font-family:'Syne',sans-serif;">Top Morosos</div>
+      <a href="{{ url_for('students.index') }}?status=MOROSO" style="font-size:12px;color:var(--gold);text-decoration:none;">Ver todos →</a>
+    </div>
+    {% for m in stats.morosos_list %}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+      <div style="font-size:13px;font-weight:500;color:#CBD5E1;">{{ m.name }}</div>
+      <div style="font-size:13px;font-weight:700;color:#EF4444;">{{ m.debt | currency }}</div>
+    </div>
+    {% else %}
+    <div style="color:#475569;font-size:14px;text-align:center;padding:24px;">Sin morosos 🎉</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

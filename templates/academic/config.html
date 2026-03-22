@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Configuracion Evaluacion{% endblock %}
+{% block content %}
+
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+  <a href="{{ url_for('academic.index') }}" style="color:#475569;text-decoration:none;font-size:14px;">Academico</a>
+  <span style="color:#334155;">/</span>
+  <h1 class="font-display" style="font-size:20px;font-weight:700;color:#E2E8F0;margin:0;">Configuracion de Evaluacion</h1>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:800px;">
+
+  {# ── PARAMETROS DE EVALUACION ── #}
+  <div class="card" style="padding:22px;">
+    <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:16px;">PARAMETROS DE EVALUACION</div>
+
+    {% if not sy %}
+    <div style="color:#F59E0B;font-size:13px;margin-bottom:12px;">
+      No hay ano escolar activo.
+      <a href="{{ url_for('admin.index') }}#years" style="color:var(--gold);">Configurar</a>
+    </div>
+    {% else %}
+    <form method="POST">
+      <input type="hidden" name="action" value="save_config">
+
+      <div style="margin-bottom:12px;">
+        <label class="form-label">Nota minima aprobatoria</label>
+        <input type="number" name="min_passing_grade"
+          value="{{ cfg.min_passing_grade if cfg else 10 }}"
+          step="0.5" min="1" max="30" class="form-input" required>
+        <div style="font-size:11px;color:#475569;margin-top:4px;">
+          El sistema resalta en rojo las notas por debajo de este valor.
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label class="form-label">Nota maxima (escala)</label>
+        <input type="number" name="max_grade"
+          value="{{ cfg.max_grade if cfg else 20 }}"
+          step="1" min="10" max="100" class="form-input" required>
+        <div style="font-size:11px;color:#475569;margin-top:4px;">
+          Venezuela usa escala 1–20. Puedes usar 0–100 si el colegio lo requiere.
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label class="form-label">Redondeo</label>
+        <select name="rounding_rule" class="form-input">
+          <option value="ROUND_HALF_UP"   {% if cfg and cfg.rounding_rule=='ROUND_HALF_UP'   %}selected{% endif %}>Redondeo estandar (0.5 sube)</option>
+          <option value="ROUND_DOWN"      {% if cfg and cfg.rounding_rule=='ROUND_DOWN'      %}selected{% endif %}>Siempre hacia abajo</option>
+          <option value="ROUND_HALF_EVEN" {% if cfg and cfg.rounding_rule=='ROUND_HALF_EVEN' %}selected{% endif %}>Redondeo bancario</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:18px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" name="use_decimals"
+            {% if cfg and cfg.use_decimals %}checked{% endif %}
+            style="width:16px;height:16px;accent-color:var(--gold);">
+          <span style="font-size:13px;color:#E2E8F0;">Permitir notas con decimales</span>
+        </label>
+      </div>
+
+      <button type="submit" class="btn-primary" style="width:100%;">Guardar configuracion</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {# ── ESTADO ACTUAL ── #}
+  <div style="display:flex;flex-direction:column;gap:12px;">
+
+    <div class="card" style="padding:18px;">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:12px;">ANO ESCOLAR ACTIVO</div>
+      {% if sy %}
+      <div style="font-size:16px;font-weight:700;color:#E2E8F0;font-family:'Syne',sans-serif;">{{ sy.name }}</div>
+      <div style="margin-top:10px;">
+        <a href="{{ url_for('admin.index') }}#lapsos" class="btn-secondary"
+           style="text-decoration:none;font-size:12px;">
+          Administrar lapsos
+        </a>
+      </div>
+      {% else %}
+      <div style="color:#F59E0B;font-size:13px;">Sin ano escolar activo</div>
+      {% endif %}
+    </div>
+
+    <div class="card" style="padding:18px;">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:10px;">LAPSOS CONFIGURADOS</div>
+      {% for l in lapsos %}
+      <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;">
+        <span style="color:#E2E8F0;font-weight:500;">{{ l.name }}</span>
+        <span style="color:#475569;font-size:12px;">{{ l.start_date or '—' }} / {{ l.end_date or '—' }}</span>
+      </div>
+      {% else %}
+      <div style="color:#F59E0B;font-size:13px;">
+        Sin lapsos.
+        <a href="{{ url_for('admin.index') }}#lapsos" style="color:var(--gold);">Agregar en Administracion</a>
+      </div>
+      {% endfor %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}

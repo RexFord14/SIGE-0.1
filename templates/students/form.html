@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if edit else 'Nuevo' }} Estudiante{% endblock %}
+{% block content %}
+<div style="max-width:760px;">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+    <a href="{{ url_for('students.index') }}" style="color:#475569;text-decoration:none;font-size:14px;">← Estudiantes</a>
+    <h1 class="font-display" style="font-size:20px;font-weight:700;color:#E2E8F0;margin:0;">
+      {{ 'Editar Estudiante' if edit else 'Inscribir Estudiante' }}
+    </h1>
+  </div>
+  <form method="POST" action="{{ url_for('students.save') }}">
+    {% if edit and student %}
+    <input type="hidden" name="student_id" value="{{ student.id }}">
+    {% endif %}
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+      {# ── DATOS DEL ESTUDIANTE ── #}
+      <div class="card" style="padding:20px;">
+        <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:14px;">DATOS DEL ESTUDIANTE</div>
+        <div style="margin-bottom:12px;"><label class="form-label">Primer nombre *</label>
+          <input type="text" name="first_name" value="{{ student.first_name if student else '' }}"
+            class="form-input" required></div>
+        <div style="margin-bottom:12px;"><label class="form-label">Apellido *</label>
+          <input type="text" name="last_name" value="{{ student.last_name if student else '' }}"
+            class="form-input" required></div>
+        <div style="margin-bottom:12px;"><label class="form-label">Cédula</label>
+          <input type="text" name="cedula" value="{{ cedula if edit else '' }}"
+            class="form-input" placeholder="V-12345678"></div>
+        <div style="margin-bottom:12px;"><label class="form-label">Fecha de nacimiento *</label>
+          <input type="date" name="birth_date" value="{{ student.birth_date if student else '' }}"
+            class="form-input" required></div>
+        <div style="margin-bottom:12px;"><label class="form-label">Género</label>
+          <select name="gender" class="form-input">
+            <option value="M" {% if student and student.gender=='M' %}selected{% endif %}>Masculino</option>
+            <option value="F" {% if student and student.gender=='F' %}selected{% endif %}>Femenino</option>
+          </select></div>
+        <div><label class="form-label">Sección</label>
+          <select name="section_id" class="form-input">
+            <option value="">Sin asignar</option>
+            {% for sec in sections %}
+            <option value="{{ sec.id }}" {% if student and student.section_id==sec.id %}selected{% endif %}>
+              {{ sec.label }}
+            </option>
+            {% endfor %}
+          </select></div>
+      </div>
+
+      {# ── REPRESENTANTE ── #}
+      <div class="card" style="padding:20px;">
+        <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:14px;">REPRESENTANTE / RESPONSABLE</div>
+        <div style="margin-bottom:12px;"><label class="form-label">Nombre completo *</label>
+          <input type="text" name="rep_name" value="{{ student.rep_name if student else '' }}"
+            class="form-input" required></div>
+        <div style="margin-bottom:12px;"><label class="form-label">Cédula del representante</label>
+          <input type="text" name="rep_cedula" value="{{ phone if edit else '' }}"
+            class="form-input" placeholder="V-10000000"></div>
+        <div style="margin-bottom:12px;"><label class="form-label">Parentesco</label>
+          <select name="relationship" class="form-input">
+            {% for rel in ['Madre','Padre','Abuelo/a','Tío/a','Hermano/a','Tutor legal','Otro'] %}
+            <option {% if student and student.relationship==rel %}selected{% endif %}>{{ rel }}</option>
+            {% endfor %}
+          </select></div>
+        <div style="margin-bottom:12px;"><label class="form-label">Teléfono</label>
+          <input type="tel" name="rep_phone" value="{{ phone if edit else '' }}"
+            class="form-input" placeholder="0414-1234567"></div>
+        <div style="margin-bottom:12px;"><label class="form-label">Email</label>
+          <input type="email" name="rep_email" value="{{ email if edit else '' }}"
+            class="form-input" placeholder="correo@ejemplo.com"></div>
+        <div><label class="form-label">Dirección</label>
+          <input type="text" name="rep_address" value="{{ student.address if student else '' }}"
+            class="form-input" placeholder="Dirección de residencia"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <button type="submit" class="btn-primary" style="flex:1;padding:12px;">
+        {{ 'Guardar cambios' if edit else 'Inscribir estudiante' }}
+      </button>
+      <a href="{{ url_for('students.index') }}" class="btn-secondary"
+        style="text-decoration:none;padding:12px 20px;">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

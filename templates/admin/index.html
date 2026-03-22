@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block title %}Administracion{% endblock %}
+{% block content %}
+<h1 class="font-display" style="font-size:22px;font-weight:700;color:#E2E8F0;margin:0 0 24px;">Administracion del Sistema</h1>
+
+<!-- TABS -->
+<div style="display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);">
+  {% for tab_id, tab_label in [('users','Usuarios'),('years','Ano Escolar'),('lapsos','Lapsos'),('courses','Cursos'),('subjects','Materias')] %}
+  <button onclick="showTab('{{ tab_id }}')" id="tab_btn_{{ tab_id }}"
+    style="padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;border:none;
+           border-bottom:2px solid transparent;background:transparent;color:#475569;transition:all 0.15s;">
+    {{ tab_label }}
+  </button>
+  {% endfor %}
+</div>
+
+<!-- ── USUARIOS ── -->
+<div id="tab_users" class="tab-content" style="display:none;">
+  <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;">
+    <div class="card" style="padding:20px;">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:14px;">NUEVO USUARIO</div>
+      <form method="POST" action="{{ url_for('admin.new_user') }}">
+        <div style="margin-bottom:10px;"><label class="form-label">Nombre completo</label>
+          <input type="text" name="full_name" class="form-input" required></div>
+        <div style="margin-bottom:10px;"><label class="form-label">Usuario</label>
+          <input type="text" name="username" class="form-input" required></div>
+        <div style="margin-bottom:10px;"><label class="form-label">Contrasena</label>
+          <input type="password" name="password" class="form-input" required minlength="8"></div>
+        <div style="margin-bottom:14px;"><label class="form-label">Rol</label>
+          <select name="role_id" class="form-input" required>
+            {% for r in roles %}<option value="{{ r.id }}">{{ r.label }}</option>{% endfor %}
+          </select></div>
+        <button type="submit" class="btn-primary" style="width:100%;">Crear Usuario</button>
+      </form>
+    </div>
+    <div class="card" style="overflow:hidden;">
+      <table>
+        <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td style="font-weight:600;font-size:13px;">{{ u.username }}</td>
+            <td style="font-size:13px;">{{ u.full_name }}</td>
+            <td><span style="font-size:12px;color:#94A3B8;">{{ u.role_label }}</span></td>
+            <td><span class="badge {% if u.active %}badge-green{% else %}badge-gray{% endif %}">
+              {% if u.active %}Activo{% else %}Inactivo{% endif %}</span></td>
+            <td style="display:flex;gap:5px;">
+              <form method="POST" action="{{ url_for('admin.toggle_user', uid=u.id) }}">
+                <button type="submit" class="btn-secondary" style="font-size:11px;padding:4px 9px;">
+                  {% if u.active %}Desactivar{% else %}Activar{% endif %}
+                </button>
+              </form>
+              <form method="POST" action="{{ url_for('admin.reset_password', uid=u.id) }}" style="display:flex;gap:4px;">
+                <input type="password" name="new_password" minlength="8" placeholder="Nueva clave"
+                  class="form-input" style="width:110px;font-size:11px;padding:4px 8px;" required>
+                <button type="submit" class="btn-secondary" style="font-size:11px;padding:4px 9px;">Reset</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── ANO ESCOLAR ── -->
+<div id="tab_years" class="tab-content" style="display:none;">
+  <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;">
+    <div class="card" style="padding:20px;">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:14px;">NUEVO ANO ESCOLAR</div>
+      <form method="POST" action="{{ url_for('admin.new_year') }}">
+        <div style="margin-bottom:12px;"><label class="form-label">Nombre (ej: 2025-2026)</label>
+          <input type="text" name="name" class="form-input" placeholder="2025-2026" required></div>
+        <button type="submit" class="btn-primary" style="width:100%;">Crear</button>
+      </form>
+    </div>
+    <div class="card" style="overflow:hidden;">
+      <table>
+        <thead><tr><th>Ano Escolar</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+          {% for y in school_years %}
+          <tr>
+            <td style="font-weight:600;font-size:14px;">{{ y.name }}</td>
+            <td><span class="badge {% if y.active %}badge-green{% else %}badge-gray{% endif %}">
+              {% if y.active %}Activo{% else %}Inactivo{% endif %}</span></td>
+            <td>
+              {% if not y.active %}
+              <form method="POST" action="{{ url_for('admin.activate_year', yid=y.id) }}" style="display:inline;">
+                <button type="submit" class="btn-primary" style="font-size:12px;padding:5px 14px;"
+                  onclick="return confirm('Activar este ano escolar?')">Activar</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" style="text-align:center;padding:20px;color:#475569;">Sin anos escolares</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── LAPSOS ── -->
+<div id="tab_lapsos" class="tab-content" style="display:none;">
+  <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;">
+    <div class="card" style="padding:20px;">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:14px;">NUEVO LAPSO</div>
+      <form method="POST" action="{{ url_for('admin.new_lapso') }}">
+        <div style="margin-bottom:10px;">
+          <label class="form-label">Ano Escolar</label>
+          <select name="school_year_id" class="form-input" required>
+            {% for y in school_years %}
+            <option value="{{ y.id }}" {% if y.active %}selected{% endif %}>{{ y.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="margin-bottom:10px;">
+          <label class="form-label">Nombre (ej: Lapso 1)</label>
+          <input type="text" name="name" class="form-input" placeholder="Lapso 1" required>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+          <div><label class="form-label">Inicio (opcional)</label>
+            <input type="date" name="start_date" class="form-input"></div>
+          <div><label class="form-label">Fin (opcional)</label>
+            <input type="date" name="end_date" class="form-input"></div>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%;">Crear Lapso</button>
+      </form>
+    </div>
+    <div class="card" style="overflow:hidden;">
+      <table>
+        <thead><tr><th>Lapso</th><th>Ano Escolar</th><th>Inicio</th><th>Fin</th><th></th></tr></thead>
+        <tbody>
+          {% for l in lapsos %}
+          <tr>
+            <td style="font-weight:600;font-size:13px;">{{ l.name }}</td>
+            <td style="font-size:12px;color:#94A3B8;">{{ l.year_name }}</td>
+            <td style="font-size:12px;color:#475569;">{{ l.start_date or '—' }}</td>
+            <td style="font-size:12px;color:#475569;">{{ l.end_date or '—' }}</td>
+            <td>
+              <form method="POST" action="{{ url_for('admin.delete_lapso', lid=l.id) }}">
+                <button type="submit" class="btn-danger" style="font-size:11px;padding:4px 10px;"
+                  onclick="return confirm('Eliminar lapso {{l.name}}?')">Eliminar</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" style="text-align:center;padding:24px;color:#475569;">Sin lapsos. Agrega el primero.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── CURSOS ── -->
+<div id="tab_courses" class="tab-content" style="display:none;">
+  <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;">
+    <div class="card" style="padding:20px;">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:14px;">NUEVO GRADO / ANO</div>
+      <form method="POST" action="{{ url_for('admin.new_course') }}">
+        <div style="margin-bottom:10px;"><label class="form-label">Nombre</label>
+          <input type="text" name="name" class="form-input" placeholder="ej: 1er Ano" required></div>
+        <div style="margin-bottom:10px;"><label class="form-label">Nivel</label>
+          <select name="level" class="form-input" required>
+            <option value="PRIMARY">Primaria</option>
+            <option value="SECONDARY">Secundaria</option>
+          </select></div>
+        <div style="margin-bottom:14px;"><label class="form-label">Numero de grado</label>
+          <select name="grade" class="form-input" required>
+            {% for n in range(1,7) %}<option value="{{ n }}">{{ n }}</option>{% endfor %}
+          </select></div>
+        <button type="submit" class="btn-primary" style="width:100%;">Crear (agrega materias automaticamente)</button>
+      </form>
+    </div>
+    <div class="card" style="overflow:hidden;">
+      <table>
+        <thead><tr><th>Nombre</th><th>Nivel</th><th>Materias</th></tr></thead>
+        <tbody>
+          {% for c in courses %}
+          <tr>
+            <td style="font-weight:600;font-size:13px;">{{ c.name }}</td>
+            <td><span class="badge {% if c.level=='PRIMARY' %}badge-green{% else %}badge-blue{% endif %}" style="font-size:11px;">
+              {{ 'Primaria' if c.level=='PRIMARY' else 'Secundaria' }}</span></td>
+            <td style="font-size:12px;color:#94A3B8;">{{ c.num_subjects }} materia(s)</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" style="text-align:center;padding:20px;color:#475569;">Sin cursos</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── MATERIAS ── -->
+<div id="tab_subjects" class="tab-content" style="display:none;">
+  <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;">
+    <div class="card" style="padding:20px;">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:14px;">AGREGAR MATERIA</div>
+      <form method="POST" action="{{ url_for('admin.new_subject') }}">
+        <div style="margin-bottom:10px;"><label class="form-label">Nombre de la materia</label>
+          <input type="text" name="name" class="form-input" required></div>
+        <div style="margin-bottom:14px;"><label class="form-label">Grado / Ano</label>
+          <select name="course_id" class="form-input" required>
+            <option value="">Seleccionar...</option>
+            {% for c in courses %}
+            <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
+          </select></div>
+        <button type="submit" class="btn-primary" style="width:100%;">Agregar Materia</button>
+      </form>
+    </div>
+    <div class="card" style="overflow:hidden;max-height:600px;overflow-y:auto;">
+      <table>
+        <thead><tr><th>Materia</th><th>Grado / Ano</th><th></th></tr></thead>
+        <tbody>
+          {% for sub in subjects %}
+          <tr>
+            <td style="font-size:13px;color:#E2E8F0;">{{ sub.name }}</td>
+            <td style="font-size:12px;color:#94A3B8;">{{ sub.course_name }}</td>
+            <td>
+              <form method="POST" action="{{ url_for('admin.delete_subject', sid=sub.id) }}" style="display:inline;">
+                <button type="submit" class="btn-danger" style="font-size:11px;padding:4px 10px;"
+                  onclick="return confirm('Eliminar materia?')">Eliminar</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" style="text-align:center;padding:20px;color:#475569;">Sin materias</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(function(el){ el.style.display='none'; });
+  document.querySelectorAll('[id^="tab_btn_"]').forEach(function(btn){
+    btn.style.color='#475569';
+    btn.style.borderBottomColor='transparent';
+    btn.dataset.active='0';
+  });
+  var panel = document.getElementById('tab_'+id);
+  var btn   = document.getElementById('tab_btn_'+id);
+  if(panel) panel.style.display='block';
+  if(btn){ btn.style.color='var(--gold)'; btn.style.borderBottomColor='var(--gold)'; btn.dataset.active='1'; }
+  history.replaceState(null,'','#'+id);
+}
+var hash = window.location.hash.replace('#','');
+showTab(hash && document.getElementById('tab_'+hash) ? hash : 'users');
+</script>
+{% endblock %}

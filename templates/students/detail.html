@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block title %}{{ student.first_name }} {{ student.last_name }}{% endblock %}
+{% block content %}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+  <a href="{{ url_for('students.index') }}" style="color:#475569;text-decoration:none;font-size:14px;">← Estudiantes</a>
+  <h1 class="font-display" style="font-size:20px;font-weight:700;color:#E2E8F0;margin:0;">
+    {{ student.first_name }} {{ student.last_name }}
+  </h1>
+  <span class="badge {% if student.status=='ACTIVO' %}badge-green{% elif student.status=='MOROSO' %}badge-red{% elif student.status=='EGRESADO' %}badge-blue{% elif student.status=='BECADO' %}badge-purple{% else %}badge-gray{% endif %}">
+    {{ student.status }}
+  </span>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:16px;">
+  {# ── INFO + ACCIONES ── #}
+  <div style="display:flex;flex-direction:column;gap:12px;">
+    <div class="card" style="padding:18px;">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:12px;">DATOS PERSONALES</div>
+      {% for label, value in [
+        ('Cédula', cedula), ('Nacimiento', student.birth_date),
+        ('Género', 'Masculino' if student.gender=='M' else 'Femenino'),
+        ('Sección', student.section_label or '—'),
+        ('Inscripción', student.enrollment_date),
+      ] %}
+      <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;">
+        <span style="color:#475569;">{{ label }}</span>
+        <span style="color:#E2E8F0;font-weight:500;">{{ value or '—' }}</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="card" style="padding:18px;">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:12px;">REPRESENTANTE</div>
+      <div style="font-weight:600;color:#E2E8F0;font-size:14px;margin-bottom:4px;">{{ student.rep_name }}</div>
+      <div style="font-size:12px;color:#475569;margin-bottom:2px;">{{ student.rep_rel }}</div>
+      <div style="font-size:12px;color:#94A3B8;">{{ phone }}</div>
+      <div style="font-size:12px;color:#94A3B8;">{{ email }}</div>
+    </div>
+
+    {# Estado #}
+    <div class="card" style="padding:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:10px;">CAMBIAR ESTADO</div>
+      <form method="POST" action="{{ url_for('students.change_status', sid=student.id) }}">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          {% for st, bc in [('ACTIVO','badge-green'),('MOROSO','badge-red'),('BECADO','badge-purple'),('RETIRADO','badge-gray'),('EGRESADO','badge-blue')] %}
+          {% if st != student.status %}
+          <button type="submit" name="new_status" value="{{ st }}"
+            class="btn-secondary" style="font-size:11px;padding:4px 10px;"
+            onclick="return confirm('¿Cambiar estado a {{ st }}?')">
+            {{ st }}
+          </button>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </form>
+    </div>
+
+    {# Acciones peligrosas #}
+    <div class="card" style="padding:16px;border-color:rgba(239,68,68,.3);">
+      <div style="font-size:11px;font-weight:700;color:#EF4444;margin-bottom:10px;">ZONA PELIGROSA</div>
+      <a href="{{ url_for('students.edit_form', sid=student.id) }}"
+        class="btn-secondary" style="text-decoration:none;display:block;text-align:center;margin-bottom:8px;font-size:12px;">
+        ✏ Editar datos
+      </a>
+      <button onclick="document.getElementById('del-modal').style.display='flex'"
+        class="btn-danger" style="width:100%;font-size:12px;">
+        🗑 Eliminar estudiante
+      </button>
+    </div>
+  </div>
+
+  {# ── TABS ── #}
+  <div>
+    <div style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px;">
+      {% for tid, tlabel in [('facturas','Facturas'),('pagos','Pagos'),('notas','Notas')] %}
+      <button onclick="showTab('{{ tid }}')" id="dtab_{{ tid }}"
+        style="padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;border:none;
+               border-bottom:2px solid transparent;background:transparent;color:#475569;transition:all .2s;">
+        {{ tlabel }}
+      </button>
+      {% endfor %}
+    </div>
+
+    {# FACTURAS #}
+    <div id="tab_facturas">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:600;color:#E2E8F0;">{{ invoices|length }} facturas</div>
+        <a href="{{ url_for('finance.nuevo_pago', student_id=student.id) }}"
+          class="btn-primary" style="text-decoration:none;font-size:12px;">+ Registrar pago</a>
+      </div>
+      <div class="card" style="overflow:hidden;">
+        <table>
+          <thead><tr><th>Número</th><th>Concepto</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th></tr></thead>
+          <tbody>
+            {% for inv in invoices %}
+            <tr>
+              <td style="font-family:monospace;font-size:12px;">{{ inv.invoice_number }}</td>
+              <td>{{ inv.concept_name }}</td>
+              <td style="color:#94A3B8;">Bs.{{ '%.2f'|format(inv.net_amount) }}</td>
+              <td style="color:#10B981;">Bs.{{ '%.2f'|format(inv.paid_amount) }}</td>
+              <td style="font-weight:700;color:{% if inv.balance > 0 %}#EF4444{% else %}#10B981{% endif %};">Bs.{{ '%.2f'|format(inv.balance) }}</td>
+              <td><span class="badge {% if inv.status=='PAGADO' %}badge-green{% elif inv.status=='PARCIAL' %}badge-yellow{% elif inv.status=='ANULADO' %}badge-gray{% else %}badge-red{% endif %}">{{ inv.status }}</span></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" style="text-align:center;padding:24px;color:#475569;">Sin facturas</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {# PAGOS #}
+    <div id="tab_pagos" style="display:none;">
+      <div class="card" style="overflow:hidden;">
+        <table>
+          <thead><tr><th>Número</th><th>Monto</th><th>Método</th><th>Fecha</th><th>Comprobante</th><th></th></tr></thead>
+          <tbody>
+            {% for p in payments %}
+            <tr>
+              <td style="font-family:monospace;font-size:12px;">{{ p.payment_number }}</td>
+              <td style="font-weight:700;color:#10B981;">Bs.{{ '%.2f'|format(p.amount) }}</td>
+              <td>
+                <span class="badge badge-blue">{{ p.payment_method }}</span>
+              </td>
+              <td style="font-size:12px;color:#475569;">{{ p.payment_date }}</td>
+              <td>
+                {% if p.thumb_filename %}
+                <a href="{{ url_for('finance.payment_original', pid=p.id) }}" target="_blank"
+                  style="display:inline-block;width:42px;height:42px;border-radius:6px;overflow:hidden;border:1px solid var(--border);">
+                  <img src="{{ url_for('finance.payment_thumb', pid=p.id) }}"
+                    style="width:42px;height:42px;object-fit:cover;" loading="lazy">
+                </a>
+                {% else %}
+                <span style="font-size:11px;color:#334155;">Sin foto</span>
+                {% endif %}
+              </td>
+              <td>
+                <button onclick="openVoidModal({{ p.id }})"
+                  class="btn-danger" style="font-size:11px;padding:4px 8px;">Anular</button>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" style="text-align:center;padding:24px;color:#475569;">Sin pagos registrados</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {# NOTAS #}
+    <div id="tab_notas" style="display:none;">
+      <div class="card" style="overflow:hidden;">
+        <table>
+          <thead><tr><th>Materia</th><th>Lapso</th><th>Actividad</th><th>Nota</th></tr></thead>
+          <tbody>
+            {% for g in grades %}
+            <tr>
+              <td style="font-weight:500;">{{ g.subject }}</td>
+              <td style="color:#94A3B8;">{{ g.lapso }}</td>
+              <td style="font-size:13px;">{{ g.activity }}</td>
+              <td>
+                <span style="font-weight:700;font-size:15px;color:{% if g.score >= 10 %}#10B981{% else %}#EF4444{% endif %};">
+                  {{ '%.1f'|format(g.score) }}
+                </span>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" style="text-align:center;padding:24px;color:#475569;">Sin notas registradas</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── MODAL ELIMINAR ── #}
+<div id="del-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid rgba(239,68,68,.4);border-radius:12px;padding:28px;width:340px;">
+    <div style="font-size:16px;font-weight:700;color:#EF4444;margin-bottom:8px;">⚠ Eliminar Estudiante</div>
+    <p style="color:#94A3B8;font-size:13px;margin:0 0 4px;">Vas a eliminar permanentemente a:</p>
+    <p style="color:#E2E8F0;font-weight:700;font-size:15px;margin:0 0 14px;">{{ student.first_name }} {{ student.last_name }}</p>
+    <p style="color:#475569;font-size:12px;margin:0 0 16px;">Esta acción no se puede deshacer. Si el estudiante tiene facturas o notas, no podrá eliminarse.</p>
+    <form method="POST" action="{{ url_for('students.delete_student', sid=student.id) }}">
+      <label class="form-label">PIN de seguridad (4 dígitos)</label>
+      <input type="password" name="delete_pin" maxlength="4" pattern="[0-9]{4}"
+        inputmode="numeric" class="form-input"
+        style="text-align:center;font-size:24px;letter-spacing:8px;margin-bottom:14px;" required autofocus>
+      <div style="display:flex;gap:8px;">
+        <button type="submit" class="btn-danger" style="flex:1;">Eliminar</button>
+        <button type="button" onclick="document.getElementById('del-modal').style.display='none'"
+          class="btn-secondary" style="flex:1;">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── MODAL ANULAR PAGO ── #}
+<div id="void-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;width:300px;">
+    <div style="font-size:15px;font-weight:700;color:#E2E8F0;margin-bottom:6px;">Anular Pago</div>
+    <p style="color:#475569;font-size:13px;margin:0 0 16px;">Ingresa el PIN de 4 dígitos para confirmar.</p>
+    <form id="void-form" method="POST">
+      <input type="password" name="void_pin" maxlength="4" pattern="[0-9]{4}"
+        inputmode="numeric" class="form-input"
+        placeholder="••••" style="text-align:center;font-size:24px;letter-spacing:8px;margin-bottom:14px;" required>
+      <div style="display:flex;gap:8px;">
+        <button type="submit" class="btn-danger" style="flex:1;">Anular</button>
+        <button type="button" onclick="document.getElementById('void-modal').style.display='none'"
+          class="btn-secondary" style="flex:1;">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function showTab(id) {
+  ['facturas','pagos','notas'].forEach(function(t){
+    document.getElementById('tab_'+t).style.display = t===id ? 'block' : 'none';
+    var btn = document.getElementById('dtab_'+t);
+    btn.style.color = t===id ? 'var(--gold)' : '#475569';
+    btn.style.borderBottomColor = t===id ? 'var(--gold)' : 'transparent';
+  });
+}
+showTab('facturas');
+function openVoidModal(pid) {
+  document.getElementById('void-form').action = '/finanzas/anular-pago/' + pid;
+  var m = document.getElementById('void-modal');
+  m.style.display = 'flex';
+  setTimeout(function(){ m.querySelector('input').focus(); }, 50);
+}
+document.getElementById('void-modal').addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
+document.getElementById('del-modal').addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
+</script>
+{% endblock %}

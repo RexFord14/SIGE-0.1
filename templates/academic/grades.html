@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block title %}Cargar Notas{% endblock %}
+{% block content %}
+
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+  <a href="{{ url_for('academic.index') }}" style="color:#475569;text-decoration:none;font-size:14px;">Academico</a>
+  <span style="color:#334155;">/</span>
+  <h1 class="font-display" style="font-size:20px;font-weight:700;color:#E2E8F0;margin:0;">Cargar Notas</h1>
+</div>
+
+{# ─── FILTRO: grado + lapso + boton explicito ─── #}
+<div class="card" style="padding:16px;margin-bottom:16px;">
+  <form method="GET" id="filter-form">
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+
+      <div>
+        <label class="form-label">Grado / Ano</label>
+        <select name="course_id" class="form-input" style="min-width:190px;">
+          <option value="">Seleccionar...</option>
+          {% if primary %}
+          <optgroup label="Primaria">
+            {% for c in primary %}
+            <option value="{{ c.id }}" {% if course_id == c.id|string %}selected{% endif %}>
+              {{ c.name }} ({{ c.num_students }} alumnos)
+            </option>
+            {% endfor %}
+          </optgroup>
+          {% endif %}
+          {% if secondary %}
+          <optgroup label="Secundaria">
+            {% for c in secondary %}
+            <option value="{{ c.id }}" {% if course_id == c.id|string %}selected{% endif %}>
+              {{ c.name }} ({{ c.num_students }} alumnos)
+            </option>
+            {% endfor %}
+          </optgroup>
+          {% endif %}
+        </select>
+      </div>
+
+      <div>
+        <label class="form-label">Lapso</label>
+        <select name="lapso_id" class="form-input" style="min-width:150px;">
+          <option value="">Seleccionar...</option>
+          {% for l in lapsos %}
+          <option value="{{ l.id }}" {% if lapso_id == l.id|string %}selected{% endif %}>
+            {{ l.name }}
+          </option>
+          {% endfor %}
+        </select>
+        {% if not lapsos %}
+        <div style="font-size:11px;color:#F59E0B;margin-top:4px;">
+          Sin lapsos.
+          <a href="{{ url_for('admin.index') }}#lapsos" style="color:var(--gold);">Configurar</a>
+        </div>
+        {% endif %}
+      </div>
+
+      <div style="padding-bottom:1px;">
+        <button type="submit" class="btn-primary" style="padding:9px 22px;">
+          Cargar
+        </button>
+      </div>
+
+    </div>
+  </form>
+</div>
+
+{# ─── ESTADOS ─── #}
+{% if not course_id or not lapso_id %}
+  <div class="card" style="padding:40px;text-align:center;">
+    <div style="font-size:14px;color:#475569;">Selecciona el grado y el lapso, luego haz clic en <strong style="color:#E2E8F0;">Cargar</strong>.</div>
+  </div>
+
+{% elif not subjects %}
+  <div class="card" style="padding:24px;">
+    <div style="font-size:14px;color:#E2E8F0;margin-bottom:8px;">Sin materias para este grado.</div>
+    <div style="font-size:13px;color:#475569;margin-bottom:12px;">Las materias se gestionan en Administracion.</div>
+    <a href="{{ url_for('admin.index') }}#subjects" class="btn-primary" style="text-decoration:none;font-size:13px;">
+      Agregar materias
+    </a>
+  </div>
+
+{% elif not students %}
+  <div class="card" style="padding:24px;color:#475569;font-size:14px;">
+    Sin estudiantes en este grado.
+    <a href="{{ url_for('academic.assign_section') }}" style="color:var(--gold);margin-left:6px;">Asignar estudiantes</a>
+  </div>
+
+{% else %}
+  {# ─── TABLA DE NOTAS ─── #}
+  <form method="POST" id="grades-form">
+    <input type="hidden" name="course_id" value="{{ course_id }}">
+    <input type="hidden" name="lapso_id"  value="{{ lapso_id }}">
+
+    {% if config %}
+    <div style="font-size:12px;color:#475569;margin-bottom:10px;">
+      Escala 0 – {{ config.max_grade|int }}
+      &nbsp;·&nbsp;
+      Minimo aprobatorio: {{ config.min_passing_grade|int }}
+    </div>
+    {% endif %}
+
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="text-align:left;padding:10px 16px;font-size:12px;color:#475569;
+                       font-weight:600;position:sticky;left:0;background:var(--surface);min-width:160px;">
+              Estudiante
+            </th>
+            {% for sub in subjects %}
+            <th style="text-align:center;padding:10px 6px;font-size:12px;color:#94A3B8;
+                       font-weight:600;min-width:86px;">
+              {{ sub.name }}
+            </th>
+            {% endfor %}
+            <th style="text-align:center;padding:10px 6px;min-width:38px;">
+              <span style="font-size:11px;color:#475569;">Obs.</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for stu in students %}
+          {% set row = loop.index0 %}
+          <tr style="border-bottom:1px solid var(--border);">
+
+            <td style="padding:8px 16px;position:sticky;left:0;background:var(--surface);">
+              <div style="font-size:13px;font-weight:600;color:#E2E8F0;">
+                {{ stu.last_name }}, {{ stu.first_name }}
+              </div>
+              {% if stu.status == 'BECADO' %}
+              <div style="font-size:10px;color:#8B5CF6;">Becado</div>
+              {% elif stu.status == 'MOROSO' %}
+              <div style="font-size:10px;color:#F59E0B;">Moroso</div>
+              {% endif %}
+            </td>
+
+            {% for sub in subjects %}
+            {% set col = loop.index0 %}
+            {% set score = grade_map.get((stu.id, sub.id)) %}
+            <td style="padding:6px 5px;text-align:center;">
+              <input
+                type="number"
+                name="grade_{{ stu.id }}_{{ sub.id }}"
+                value="{{ '%.1f'|format(score) if score is not none else '' }}"
+                min="0"
+                max="{{ config.max_grade if config else 20 }}"
+                step="0.1"
+                tabindex="{{ row * subjects|length + col + 1 }}"
+                class="grade-cell"
+                data-min="{{ config.min_passing_grade if config else 10 }}"
+                style="width:72px;text-align:center;padding:5px 4px;font-size:13px;font-weight:600;
+                       background:var(--surface-2);border-radius:6px;
+                       border:1px solid
+                       {% if score is not none %}
+                         {% if config and score < config.min_passing_grade %}#EF4444{% else %}#10B981{% endif %}
+                       {% else %}var(--border){% endif %};
+                       color:
+                       {% if score is not none %}
+                         {% if config and score < config.min_passing_grade %}#EF4444{% else %}#10B981{% endif %}
+                       {% else %}#E2E8F0{% endif %};">
+            </td>
+            {% endfor %}
+
+            <td style="padding:6px 5px;text-align:center;">
+              <button type="button"
+                onclick="toggleObs('obs_{{ stu.id }}')"
+                title="Agregar observacion"
+                style="background:transparent;cursor:pointer;
+                       border:1px solid {% if notes_map.get(stu.id) %}var(--gold){% else %}var(--border){% endif %};
+                       border-radius:5px;padding:3px 8px;font-size:12px;font-weight:600;
+                       color:{% if notes_map.get(stu.id) %}var(--gold){% else %}#475569{% endif %};">
+                +
+              </button>
+            </td>
+          </tr>
+
+          <tr id="obs_{{ stu.id }}"
+              style="display:{% if notes_map.get(stu.id) %}table-row{% else %}none{% endif %};
+                     background:rgba(201,168,76,.04);">
+            <td colspan="{{ subjects|length + 2 }}" style="padding:5px 16px 10px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:11px;color:#475569;white-space:nowrap;">
+                  {{ stu.first_name }}:
+                </span>
+                <input type="text"
+                  name="note_{{ stu.id }}"
+                  value="{{ notes_map.get(stu.id, '') }}"
+                  class="form-input"
+                  style="flex:1;font-size:12px;padding:5px 10px;"
+                  placeholder="Observacion del estudiante en este lapso...">
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:14px;display:flex;gap:10px;align-items:center;">
+      <button type="submit" class="btn-primary" style="padding:11px 32px;font-size:14px;">
+        Guardar notas
+      </button>
+      <span style="font-size:12px;color:#475569;">
+        {{ students|length }} estudiante(s) · {{ subjects|length }} materia(s)
+      </span>
+    </div>
+  </form>
+{% endif %}
+
+<script>
+function toggleObs(id) {
+  var row = document.getElementById(id);
+  if (!row) return;
+  var showing = row.style.display !== 'none';
+  row.style.display = showing ? 'none' : 'table-row';
+  if (!showing) { var inp = row.querySelector('input[type=text]'); if (inp) inp.focus(); }
+}
+
+document.addEventListener('input', function(e) {
+  if (!e.target.classList.contains('grade-cell')) return;
+  var val  = parseFloat(e.target.value);
+  var minG = parseFloat(e.target.dataset.min);
+  if (isNaN(val) || e.target.value === '') {
+    e.target.style.borderColor = 'var(--border)';
+    e.target.style.color = '#E2E8F0';
+  } else if (val < minG) {
+    e.target.style.borderColor = '#EF4444';
+    e.target.style.color = '#EF4444';
+  } else {
+    e.target.style.borderColor = '#10B981';
+    e.target.style.color = '#10B981';
+  }
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Tab') return;
+  var focused = document.activeElement;
+  if (!focused || !focused.classList.contains('grade-cell')) return;
+  e.preventDefault();
+  var cells = Array.from(document.querySelectorAll('.grade-cell'));
+  var idx   = cells.indexOf(focused);
+  var next  = e.shiftKey ? cells[idx - 1] : cells[idx + 1];
+  if (next) { next.focus(); next.select(); }
+});
+</script>
+{% endblock %}

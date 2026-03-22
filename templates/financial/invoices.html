@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Facturas{% endblock %}
+{% block page_title %}Facturas y Cuentas por Cobrar{% endblock %}
+
+{% block header_actions %}
+{% if can_create %}
+<button onclick="document.getElementById('modal-new-invoice').classList.remove('hidden')"
+        class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+    Nueva Factura
+</button>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+    <!-- Filtros -->
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+        <form method="get" class="flex gap-3 items-end flex-wrap">
+            <div class="flex-1 min-w-48">
+                <label class="block text-xs font-medium text-slate-600 mb-1">Buscar</label>
+                <input type="text" name="q" value="{{ q }}" placeholder="Número, estudiante..."
+                       class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div class="w-40">
+                <label class="block text-xs font-medium text-slate-600 mb-1">Estado</label>
+                <select name="status" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="">Todos</option>
+                    {% for s in statuses %}
+                    <option value="{{ s }}" {% if s == status_filter %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="px-4 py-2 bg-slate-800 text-white text-sm rounded-lg hover:bg-slate-700">Filtrar</button>
+            <a href="/financial/invoices" class="px-4 py-2 bg-slate-100 text-slate-600 text-sm rounded-lg hover:bg-slate-200">Limpiar</a>
+        </form>
+    </div>
+
+    <!-- Tabla de facturas -->
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div class="px-5 py-3 border-b border-slate-100">
+            <span class="text-sm text-slate-500">{{ total }} factura{% if total != 1 %}s{% endif %}</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                    <tr>
+                        <th class="px-5 py-3 text-left">Número</th>
+                        <th class="px-5 py-3 text-left">Estudiante</th>
+                        <th class="px-5 py-3 text-left">Concepto</th>
+                        <th class="px-5 py-3 text-right">Monto</th>
+                        <th class="px-5 py-3 text-right">Saldo</th>
+                        <th class="px-5 py-3 text-left">Vencimiento</th>
+                        <th class="px-5 py-3 text-left">Estado</th>
+                        <th class="px-5 py-3 text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for inv in invoices %}
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-5 py-3 font-mono text-xs text-slate-500">{{ inv.numero }}</td>
+                        <td class="px-5 py-3">
+                            <a href="/students/{{ inv.student_id }}" class="font-medium text-slate-900 hover:text-blue-600">
+                                {{ inv.student.apellidos }}, {{ inv.student.nombres }}
+                            </a>
+                        </td>
+                        <td class="px-5 py-3 text-slate-600 max-w-48 truncate">{{ inv.concepto }}</td>
+                        <td class="px-5 py-3 text-right font-medium">Bs. {{ "%.2f"|format(inv.monto_neto) }}</td>
+                        <td class="px-5 py-3 text-right font-semibold {% if inv.saldo_pendiente > 0 %}text-red-600{% else %}text-emerald-600{% endif %}">
+                            Bs. {{ "%.2f"|format(inv.saldo_pendiente) }}
+                        </td>
+                        <td class="px-5 py-3 text-slate-600 text-xs">{{ inv.fecha_vencimiento.strftime('%d/%m/%Y') }}</td>
+                        <td class="px-5 py-3">
+                            {% set sc = inv.status.value %}
+                            <span class="badge {% if sc == 'Pendiente' %}bg-amber-100 text-amber-700{% elif sc == 'Pagado' %}bg-emerald-100 text-emerald-700{% elif sc == 'Vencido' %}bg-red-100 text-red-700{% else %}bg-slate-100 text-slate-500{% endif %}">{{ sc }}</span>
+                        </td>
+                        <td class="px-5 py-3 text-right">
+                            <div class="flex items-center gap-2 justify-end">
+                                {% if inv.saldo_pendiente > 0 and can_create and sc != 'Anulado' %}
+                                <a href="/financial/invoices/{{ inv.id }}/pay" class="text-emerald-600 hover:text-emerald-800 text-xs font-medium">Pagar</a>
+                                {% endif %}
+                                {% if can_void and sc != 'Anulado' %}
+                                <form method="post" action="/financial/invoices/{{ inv.id }}/void" class="inline">
+                                    <input type="hidden" name="razon" value="Anulación manual">
+                                    <button type="submit" onclick="return confirm('¿Anular esta factura?')"
+                                            class="text-red-500 hover:text-red-700 text-xs font-medium">Anular</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" class="px-5 py-10 text-center text-slate-400">No hay facturas</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nueva Factura -->
+<div id="modal-new-invoice" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
+        <div class="flex items-center justify-between mb-5">
+            <h3 class="font-semibold text-slate-800">Nueva Factura</h3>
+            <button onclick="document.getElementById('modal-new-invoice').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">✕</button>
+        </div>
+        <form method="post" action="/financial/invoices/new" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Estudiante *</label>
+                <input list="students-list" name="student_id" required placeholder="Buscar estudiante..."
+                       class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                       id="student-search">
+                <datalist id="students-list">
+                    <!-- Populated via simple text input with student_id -->
+                </datalist>
+                <p class="text-xs text-slate-400 mt-1">Ingrese el ID numérico del estudiante</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Concepto *</label>
+                <input type="text" name="concepto" required placeholder="Ej: Mensualidad Octubre 2024"
+                       class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Monto Total (Bs.) *</label>
+                    <input type="number" name="monto_total" step="0.01" min="0.01" required
+                           class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Descuento (Bs.)</label>
+                    <input type="number" name="descuento" step="0.01" min="0" value="0"
+                           class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Fecha de Vencimiento *</label>
+                <input type="date" name="fecha_vencimiento" required
+                       class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">Crear Factura</button>
+                <button type="button" onclick="document.getElementById('modal-new-invoice').classList.add('hidden')"
+                        class="px-4 py-2 bg-slate-100 text-slate-700 text-sm rounded-lg hover:bg-slate-200">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block title %}Finanzas{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+  <h1 class="font-display" style="font-size:22px;font-weight:700;color:#E2E8F0;margin:0;">Finanzas</h1>
+  <a href="{{ url_for('finance.nuevo_pago') }}" class="btn-primary" style="text-decoration:none;display:flex;align-items:center;gap:8px;">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Registrar Pago
+  </a>
+</div>
+
+{# ── TASA DEL DÍA ── #}
+<div class="card" style="padding:14px 20px;margin-bottom:16px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="font-size:18px;">💱</span>
+    {% if rate %}
+    <div>
+      <span style="font-size:11px;color:#475569;display:block;">TASA HOY</span>
+      <span style="font-size:16px;font-weight:800;color:var(--gold);font-family:'Syne',sans-serif;">
+        1 USD = Bs.{{ '%.2f'|format(rate) }}
+      </span>
+    </div>
+    <div style="width:1px;height:36px;background:var(--border);margin:0 8px;"></div>
+    {% set cobrado_hoy = stats.cobrado_hoy or 0 %}
+    <div style="font-size:13px;color:#94A3B8;">
+      Cobrado hoy:
+      <span style="font-weight:700;color:#10B981;">Bs.{{ '%.2f'|format(cobrado_hoy) }}</span>
+      <span style="color:#475569;margin:0 4px;">·</span>
+      <span style="font-weight:700;color:#60A5FA;">${{ '%.2f'|format(cobrado_hoy / rate) }}</span>
+    </div>
+    {% else %}
+    <div>
+      <span style="font-size:11px;color:#F59E0B;">Sin tasa registrada hoy</span>
+    </div>
+    {% endif %}
+  </div>
+  <form method="POST" action="{{ url_for('finance.set_rate') }}" style="display:flex;gap:8px;align-items:center;margin-left:auto;">
+    <label style="font-size:12px;color:#475569;white-space:nowrap;">Bs/USD:</label>
+    <input type="number" name="rate_bs" step="0.01" min="1"
+      value="{{ rate if rate else '' }}" placeholder="ej: 92.50"
+      style="width:100px;background:var(--surface-2);border:1px solid var(--border);
+             color:#E2E8F0;padding:6px 10px;border-radius:6px;font-size:13px;">
+    <button type="submit" class="btn-secondary" style="font-size:12px;padding:6px 14px;white-space:nowrap;">
+      {% if rate %}Actualizar{% else %}Registrar{% endif %}
+    </button>
+  </form>
+</div>
+
+{# ── STATS ── #}
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+  <div class="stat-card">
+    <div style="font-size:10px;color:#475569;margin-bottom:4px;">COBRADO HOY</div>
+    <div style="font-size:20px;font-weight:800;color:#10B981;font-family:'Syne',sans-serif;">Bs.{{ '%.0f'|format(stats.cobrado_hoy or 0) }}</div>
+    {% if rate and stats.cobrado_hoy %}<div style="font-size:12px;color:#60A5FA;">${{ '%.2f'|format((stats.cobrado_hoy or 0) / rate) }}</div>{% endif %}
+  </div>
+  <div class="stat-card">
+    <div style="font-size:10px;color:#475569;margin-bottom:4px;">PENDIENTE TOTAL</div>
+    <div style="font-size:20px;font-weight:800;color:#F59E0B;font-family:'Syne',sans-serif;">Bs.{{ '%.0f'|format(stats.total_pendiente or 0) }}</div>
+    {% if rate and stats.total_pendiente %}<div style="font-size:12px;color:#60A5FA;">${{ '%.2f'|format((stats.total_pendiente or 0) / rate) }}</div>{% endif %}
+  </div>
+  <div class="stat-card">
+    <div style="font-size:10px;color:#475569;margin-bottom:4px;">FACTURAS PENDIENTES</div>
+    <div style="font-size:20px;font-weight:800;color:#E2E8F0;font-family:'Syne',sans-serif;">{{ stats.facturas_pendientes }}</div>
+  </div>
+  <div class="stat-card">
+    <div style="font-size:10px;color:#475569;margin-bottom:4px;">MOROSOS</div>
+    <div style="font-size:20px;font-weight:800;color:#EF4444;font-family:'Syne',sans-serif;">{{ stats.morosos }}</div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1.8fr 1fr;gap:14px;">
+
+  {# ── FACTURAS PENDIENTES ── #}
+  <div>
+    <div class="card" style="overflow:hidden;margin-bottom:14px;">
+      <div style="padding:12px 18px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;color:#E2E8F0;font-family:'Syne',sans-serif;">
+        Facturas Pendientes
+      </div>
+      <table>
+        <thead><tr><th>Estudiante</th><th>Concepto</th><th>Saldo</th><th>Vence</th><th></th></tr></thead>
+        <tbody>
+          {% for inv in invoices %}
+          <tr>
+            <td style="font-weight:500;font-size:13px;">{{ inv.student_name }}</td>
+            <td style="color:#94A3B8;font-size:12px;">{{ inv.concept_name }}</td>
+            <td>
+              <span style="font-weight:700;color:#EF4444;">Bs.{{ '%.2f'|format(inv.balance) }}</span>
+              {% if rate %}<span style="font-size:11px;color:#60A5FA;margin-left:4px;">${{ '%.1f'|format(inv.balance/rate) }}</span>{% endif %}
+            </td>
+            <td style="font-size:12px;color:#475569;">{{ inv.due_date }}</td>
+            <td>
+              <a href="{{ url_for('finance.nuevo_pago', student_id=inv.student_id, invoice_id=inv.id) }}"
+                class="btn-primary" style="text-decoration:none;font-size:11px;padding:4px 10px;">Cobrar</a>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" style="text-align:center;padding:20px;color:#475569;">Sin facturas pendientes ✓</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# ── NUEVA FACTURA ── #}
+    <div class="card" style="padding:18px;">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:12px;">EMITIR FACTURA</div>
+      <form method="POST" action="{{ url_for('finance.new_invoice') }}">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div><label class="form-label">ID Estudiante</label>
+            <input type="number" name="student_id" class="form-input" placeholder="#ID" required></div>
+          <div><label class="form-label">Concepto</label>
+            <select name="concept_id" class="form-input" required>
+              <option value="">Seleccionar...</option>
+              {% for c in concepts_list %}
+              <option value="{{ c.id }}">{{ c.name }} (Bs.{{ '%.0f'|format(c.amount) }})</option>
+              {% endfor %}
+            </select></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div><label class="form-label">Monto Bs.</label>
+            <input type="number" name="amount" step="0.01" class="form-input" required></div>
+          <div><label class="form-label">Descuento</label>
+            <input type="number" name="discount" step="0.01" value="0" class="form-input"></div>
+          <div><label class="form-label">Vencimiento</label>
+            <input type="date" name="due_date" class="form-input" required></div>
+        </div>
+        <button type="submit" class="btn-primary">Emitir Factura</button>
+      </form>
+    </div>
+  </div>
+
+  {# ── PANEL DERECHO ── #}
+  <div style="display:flex;flex-direction:column;gap:12px;">
+
+    {# Totales del día #}
+    {% if totales_hoy %}
+    <div class="card" style="padding:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:10px;">COBROS DE HOY</div>
+      {% for t in totales_hoy %}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:12px;color:#94A3B8;">{{ t.payment_method }}</span>
+        <div style="text-align:right;">
+          <span style="font-size:13px;font-weight:600;color:#10B981;">Bs.{{ '%.2f'|format(t.total) }}</span>
+          {% if rate %}<span style="font-size:11px;color:#60A5FA;margin-left:4px;">${{ '%.1f'|format(t.total/rate) }}</span>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+      <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;">
+        <span style="font-size:12px;font-weight:700;color:#E2E8F0;">TOTAL</span>
+        <div style="text-align:right;">
+          <span style="font-weight:700;color:#10B981;">Bs.{{ '%.2f'|format(stats.cobrado_hoy or 0) }}</span>
+          {% if rate %}<span style="font-size:12px;color:#60A5FA;margin-left:4px;">${{ '%.2f'|format((stats.cobrado_hoy or 0)/rate) }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Top deudores #}
+    <div class="card" style="padding:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:10px;">TOP DEUDORES</div>
+      {% for s in students_with_debt %}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
+        <div style="overflow:hidden;">
+          <a href="{{ url_for('students.detail', sid=s.id) }}"
+            style="font-size:12px;color:#E2E8F0;text-decoration:none;font-weight:500;
+                   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;max-width:130px;">{{ s.name }}</a>
+          {% if s.status == 'BECADO' %}
+          <span style="font-size:10px;color:#60A5FA;">BECADO (suspendido)</span>
+          {% endif %}
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:12px;font-weight:700;color:{% if s.status=='BECADO' %}#60A5FA{% else %}#EF4444{% endif %};">Bs.{{ '%.0f'|format(s.debt) }}</div>
+          {% if rate %}<div style="font-size:10px;color:#475569;">${{ '%.1f'|format(s.debt/rate) }}</div>{% endif %}
+        </div>
+      </div>
+      {% else %}
+      <div style="color:#475569;font-size:13px;">Sin deudas pendientes</div>
+      {% endfor %}
+    </div>
+
+    {# Últimos pagos #}
+    <div class="card" style="padding:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:10px;">ÚLTIMOS PAGOS</div>
+      {% for p in recent_payments %}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);">
+        <div style="flex:1;overflow:hidden;">
+          <div style="font-size:12px;font-weight:500;color:#E2E8F0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ p.student_name }}</div>
+          <div style="font-size:11px;color:#475569;">{{ p.payment_method }} · {{ p.payment_date }}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          {% if p.has_image %}
+          <a href="{{ url_for('finance.payment_original', pid=p.id) }}" target="_blank"
+            style="display:inline-flex;width:26px;height:26px;border-radius:4px;overflow:hidden;border:1px solid var(--border);">
+            <img src="{{ url_for('finance.payment_thumb', pid=p.id) }}"
+              style="width:26px;height:26px;object-fit:cover;"></a>
+          {% endif %}
+          <div style="text-align:right;">
+            <div style="font-size:12px;font-weight:700;color:#10B981;">Bs.{{ '%.0f'|format(p.amount) }}</div>
+            {% if rate %}<div style="font-size:10px;color:#60A5FA;">${{ '%.1f'|format(p.amount/rate) }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div style="color:#475569;font-size:13px;">Sin pagos recientes</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{# ── MODAL PIN ANULAR ── #}
+<div id="void-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;width:300px;">
+    <div style="font-size:15px;font-weight:700;color:#E2E8F0;margin-bottom:6px;">Anular Pago</div>
+    <p style="color:#475569;font-size:13px;margin:0 0 16px;">PIN de seguridad (4 dígitos)</p>
+    <form id="void-form" method="POST">
+      <input type="password" name="void_pin" maxlength="4" pattern="[0-9]{4}" inputmode="numeric"
+        class="form-input" placeholder="••••"
+        style="text-align:center;font-size:24px;letter-spacing:8px;margin-bottom:14px;" required>
+      <div style="display:flex;gap:8px;">
+        <button type="submit" class="btn-danger" style="flex:1;">Anular</button>
+        <button type="button" onclick="this.closest('#void-modal').style.display='none'"
+          class="btn-secondary" style="flex:1;">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openVoidModal(pid) {
+  document.getElementById('void-form').action = '/finanzas/anular-pago/' + pid;
+  var m = document.getElementById('void-modal');
+  m.style.display = 'flex';
+  setTimeout(function(){ m.querySelector('input').focus(); }, 50);
+}
+document.getElementById('void-modal').addEventListener('click', function(e){
+  if(e.target===this) this.style.display='none';
+});
+</script>
+{% endblock %}

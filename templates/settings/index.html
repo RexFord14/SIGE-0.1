@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Configuración{% endblock %}
+{% block content %}
+<h1 class="font-display" style="font-size:22px;font-weight:700;color:#E2E8F0;margin:0 0 24px;">Configuración del Sistema</h1>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+
+  {# ── PIN DE SEGURIDAD ── #}
+  <div class="card" style="padding:20px;">
+    <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:4px;">PIN DE SEGURIDAD</div>
+    <p style="font-size:12px;color:#475569;margin:0 0 14px;">Requerido para anular pagos y eliminar estudiantes. Guardado como hash — nunca en texto plano.</p>
+    <form method="POST" action="{{ url_for('settings.change_pin') }}">
+      {% if has_pin %}
+      <div style="margin-bottom:12px;"><label class="form-label">PIN Actual</label>
+        <input type="password" name="old_pin" maxlength="4" pattern="[0-9]{4}"
+          inputmode="numeric" class="form-input" placeholder="••••" style="letter-spacing:6px;text-align:center;" required></div>
+      {% endif %}
+      <div style="margin-bottom:12px;"><label class="form-label">PIN Nuevo (4 dígitos)</label>
+        <input type="password" name="new_pin" maxlength="4" pattern="[0-9]{4}"
+          inputmode="numeric" class="form-input" placeholder="••••" style="letter-spacing:6px;text-align:center;" required></div>
+      <div style="margin-bottom:16px;"><label class="form-label">Confirmar PIN</label>
+        <input type="password" name="confirm_pin" maxlength="4" pattern="[0-9]{4}"
+          inputmode="numeric" class="form-input" placeholder="••••" style="letter-spacing:6px;text-align:center;" required></div>
+      <button type="submit" class="btn-primary" style="width:100%;">
+        {% if has_pin %}Cambiar PIN{% else %}Configurar PIN{% endif %}
+      </button>
+    </form>
+    {% if not has_pin %}
+    <div style="margin-top:10px;padding:10px;background:rgba(245,158,11,.1);border-radius:6px;color:#F59E0B;font-size:12px;">
+      ⚠ No hay PIN configurado. El PIN por defecto es 1234. Cámbialo inmediatamente.
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── ALMACENAMIENTO ── #}
+  <div class="card" style="padding:20px;">
+    <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:14px;">GESTIÓN DE IMÁGENES</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+      <div style="text-align:center;padding:12px;background:var(--navy);border-radius:8px;">
+        <div style="font-size:20px;font-weight:700;color:#E2E8F0;">{{ stats.originals_mb }}</div>
+        <div style="font-size:11px;color:#475569;">MB Originales</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:var(--navy);border-radius:8px;">
+        <div style="font-size:20px;font-weight:700;color:#E2E8F0;">{{ stats.thumbnails_mb }}</div>
+        <div style="font-size:11px;color:#475569;">MB Miniaturas</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:var(--navy);border-radius:8px;">
+        <div style="font-size:20px;font-weight:700;color:var(--gold);">{{ stats.total_mb }}</div>
+        <div style="font-size:11px;color:#475569;">MB Total</div>
+      </div>
+    </div>
+    <p style="font-size:12px;color:#475569;margin:0 0 14px;">Las imágenes se comprimen automáticamente al guardar (JPEG 80%, máx. 800px). La limpieza elimina archivos sin registro en la base de datos.</p>
+    <form method="POST" action="{{ url_for('settings.cleanup_images') }}">
+      <button type="submit" class="btn-secondary" style="width:100%;"
+        onclick="return confirm('¿Limpiar archivos huérfanos? Esta acción no puede deshacerse.')">
+        Limpiar Archivos Huérfanos
+      </button>
+    </form>
+  </div>
+</div>
+
+{# ── CUENTAS BANCARIAS ── #}
+<div style="display:grid;grid-template-columns:1fr 1.6fr;gap:16px;">
+  <div class="card" style="padding:20px;">
+    <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:14px;">NUEVA CUENTA BANCARIA</div>
+    <form method="POST" action="{{ url_for('settings.new_account') }}">
+      <div style="margin-bottom:10px;"><label class="form-label">Banco *</label>
+        <select name="bank" class="form-input" required>
+          {% for b in ['Banesco','Banco de Venezuela','Mercantil','BBVA Provincial','Bicentenario','BOD','Banplus','Venezolano de Crédito','Bancaribe','Fondo Común','Exterior','Otro'] %}
+          <option>{{ b }}</option>{% endfor %}
+        </select></div>
+      <div style="margin-bottom:10px;"><label class="form-label">Titular *</label>
+        <input type="text" name="account_holder" class="form-input" required></div>
+      <div style="margin-bottom:10px;"><label class="form-label">Número de cuenta *</label>
+        <input type="text" name="account_number" class="form-input" required maxlength="20"></div>
+      <div style="margin-bottom:10px;"><label class="form-label">Tipo</label>
+        <select name="account_type" class="form-input">
+          <option value="CORRIENTE">Corriente</option><option value="AHORRO">Ahorro</option>
+        </select></div>
+      <div style="margin-bottom:14px;"><label class="form-label">RIF</label>
+        <input type="text" name="rif" class="form-input" placeholder="J-XXXXXXXXXX-X"></div>
+      <button type="submit" class="btn-primary" style="width:100%;">Registrar Cuenta</button>
+    </form>
+  </div>
+  <div class="card" style="overflow:hidden;">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;color:#E2E8F0;font-family:'Syne',sans-serif;">Cuentas del Colegio</div>
+    <table>
+      <thead><tr><th>Banco</th><th>Titular</th><th>Cuenta</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        {% for acc in accounts %}
+        <tr>
+          <td style="font-weight:600;">{{ acc.bank }}</td>
+          <td style="font-size:12px;color:#94A3B8;">{{ acc.account_holder }}</td>
+          <td style="font-family:monospace;font-size:11px;">{{ acc.account_number }}</td>
+          <td><span class="badge {% if acc.active %}badge-green{% else %}badge-gray{% endif %}">{% if acc.active %}Activa{% else %}Inactiva{% endif %}</span></td>
+          <td>
+            <form method="POST" action="{{ url_for('settings.toggle_account', aid=acc.id) }}">
+              <button type="submit" class="btn-secondary" style="font-size:11px;padding:3px 8px;">Toggle</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="text-align:center;padding:24px;color:#475569;">Sin cuentas registradas</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

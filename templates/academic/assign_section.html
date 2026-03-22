@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}Asignar Grado / Año{% endblock %}
+{% block content %}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+  <a href="{{ url_for('academic.index') }}" style="color:#475569;text-decoration:none;font-size:14px;">← Académico</a>
+  <h1 class="font-display" style="font-size:20px;font-weight:700;color:#E2E8F0;margin:0;">Asignar Grado / Año</h1>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1.3fr;gap:16px;max-width:900px;">
+
+  {# ── PASO 1: BUSCAR ESTUDIANTE ── #}
+  <div>
+    <div class="card" style="padding:18px;margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:12px;">PASO 1 — BUSCAR ESTUDIANTE</div>
+      <form method="GET" style="display:flex;gap:8px;">
+        <input type="text" name="q" value="{{ search_q }}" class="form-input"
+          placeholder="Nombre o apellido…" style="flex:1;" autofocus>
+        <button type="submit" class="btn-primary">Buscar</button>
+      </form>
+    </div>
+
+    {% if students_found %}
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% for s in students_found %}
+      {# Card del estudiante encontrado #}
+      <div style="background:var(--surface-2);border:2px solid {% if loop.first %}var(--gold){% else %}var(--border){% endif %};
+                  border-radius:10px;overflow:hidden;">
+
+        {# Cabecera con nombre y estado #}
+        <div style="padding:12px 14px;display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-weight:700;color:#E2E8F0;font-size:14px;">{{ s.first_name }} {{ s.last_name }}</div>
+            <div style="font-size:11px;margin-top:2px;">
+              {% if s.course_name %}
+              <span style="color:#94A3B8;">Actualmente en:</span>
+              <span style="color:var(--gold);font-weight:600;"> {{ s.course_name }}</span>
+              {% else %}
+              <span style="color:#F59E0B;">⚠ Sin grado asignado</span>
+              {% endif %}
+            </div>
+          </div>
+          <span class="badge {% if s.status=='ACTIVO' %}badge-green{% elif s.status=='MOROSO' %}badge-red{% elif s.status=='BECADO' %}badge-purple{% else %}badge-gray{% endif %}">
+            {{ s.status }}
+          </span>
+        </div>
+
+        {# PASO 2: botones de grado/año inline #}
+        <div style="padding:10px 14px;border-top:1px solid var(--border);">
+          <div style="font-size:10px;font-weight:700;color:var(--gold);margin-bottom:8px;letter-spacing:.06em;">PASO 2 — SELECCIONAR GRADO / AÑO</div>
+
+          {# PRIMARIA #}
+          {% if primary %}
+          <div style="font-size:10px;color:#475569;margin-bottom:5px;letter-spacing:.05em;">PRIMARIA</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">
+            {% for c in primary %}
+            <form method="POST" style="margin:0;">
+              <input type="hidden" name="student_id" value="{{ s.id }}">
+              <input type="hidden" name="course_id" value="{{ c.id }}">
+              <button type="submit"
+                style="padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;border-radius:6px;
+                       border:1.5px solid {% if s.section_id and s.course_name == c.name %}var(--gold){% else %}var(--border){% endif %};
+                       background:{% if s.section_id and s.course_name == c.name %}rgba(201,168,76,.15){% else %}var(--surface-2){% endif %};
+                       color:{% if s.section_id and s.course_name == c.name %}var(--gold){% else %}#94A3B8{% endif %};
+                       transition:all .15s;"
+                onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'"
+                onmouseout="{% if not (s.section_id and s.course_name == c.name) %}this.style.borderColor='var(--border)';this.style.color='#94A3B8'{% endif %}"
+                onclick="return confirm('¿Asignar a {{ s.first_name }} a {{ c.name }}?')">
+                {{ c.grade }}° <span style="font-size:10px;">{% if c.enrolled %}({{ c.num_students }}){% endif %}</span>
+              </button>
+            </form>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          {# SECUNDARIA #}
+          {% if secondary %}
+          <div style="font-size:10px;color:#475569;margin-bottom:5px;letter-spacing:.05em;">SECUNDARIA</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">
+            {% for c in secondary %}
+            <form method="POST" style="margin:0;">
+              <input type="hidden" name="student_id" value="{{ s.id }}">
+              <input type="hidden" name="course_id" value="{{ c.id }}">
+              <button type="submit"
+                style="padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;border-radius:6px;
+                       border:1.5px solid {% if s.section_id and s.course_name == c.name %}#60A5FA{% else %}var(--border){% endif %};
+                       background:{% if s.section_id and s.course_name == c.name %}rgba(96,165,250,.1){% else %}var(--surface-2){% endif %};
+                       color:{% if s.section_id and s.course_name == c.name %}#60A5FA{% else %}#94A3B8{% endif %};
+                       transition:all .15s;"
+                onmouseover="this.style.borderColor='#60A5FA';this.style.color='#60A5FA'"
+                onmouseout="{% if not (s.section_id and s.course_name == c.name) %}this.style.borderColor='var(--border)';this.style.color='#94A3B8'{% endif %}"
+                onclick="return confirm('¿Asignar a {{ s.first_name }} a {{ c.name }}?')">
+                {{ c.grade }}° Año <span style="font-size:10px;">{% if c.enrolled %}({{ c.num_students }}){% endif %}</span>
+              </button>
+            </form>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          {# Botón quitar #}
+          {% if s.section_id %}
+          <form method="POST" style="margin-top:4px;">
+            <input type="hidden" name="student_id" value="{{ s.id }}">
+            <input type="hidden" name="remove" value="1">
+            <button type="submit"
+              style="font-size:11px;color:#EF4444;background:transparent;border:1px dashed rgba(239,68,68,.4);
+                     border-radius:6px;padding:4px 10px;cursor:pointer;"
+              onclick="return confirm('¿Quitar a {{ s.first_name }} de {{ s.course_name }}?')">
+              ✕ Quitar del grado actual
+            </button>
+          </form>
+          {% endif %}
+        </div>
+
+      </div>
+      {% endfor %}
+    </div>
+
+    {% elif search_q %}
+    <div class="card" style="padding:20px;text-align:center;color:#475569;font-size:13px;">
+      Sin resultados para "{{ search_q }}"
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── PANEL DERECHO: resumen de grados ── #}
+  <div class="card" style="overflow:hidden;align-self:start;">
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);">
+      <div style="font-size:13px;font-weight:700;color:#E2E8F0;font-family:'Syne',sans-serif;">Matrícula actual</div>
+    </div>
+
+    {% if primary %}
+    <div style="padding:10px 14px 2px;font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.08em;">PRIMARIA</div>
+    {% for c in primary %}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border);">
+      <span style="font-size:13px;color:#E2E8F0;font-weight:500;">{{ c.name }}</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:50px;height:5px;background:var(--navy);border-radius:3px;overflow:hidden;">
+          <div style="height:5px;background:var(--gold);width:{% if c.num_students > 0 %}{{ [c.num_students * 4, 100]|min }}%{% else %}0%{% endif %};"></div>
+        </div>
+        <span style="font-size:12px;font-weight:600;color:#E2E8F0;min-width:20px;text-align:right;">{{ c.enrolled }}</span>
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if secondary %}
+    <div style="padding:10px 14px 2px;font-size:10px;font-weight:700;color:#60A5FA;letter-spacing:.08em;">SECUNDARIA</div>
+    {% for c in secondary %}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border);">
+      <span style="font-size:13px;color:#E2E8F0;font-weight:500;">{{ c.name }}</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:50px;height:5px;background:var(--navy);border-radius:3px;overflow:hidden;">
+          <div style="height:5px;background:#60A5FA;width:{% if c.num_students > 0 %}{{ [c.num_students * 4, 100]|min }}%{% else %}0%{% endif %};"></div>
+        </div>
+        <span style="font-size:12px;font-weight:600;color:#E2E8F0;min-width:20px;text-align:right;">{{ c.enrolled }}</span>
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if not primary and not secondary %}
+    <div style="padding:24px;text-align:center;color:#475569;font-size:13px;">
+      Sin grados configurados.<br>
+      <a href="{{ url_for('admin.index') }}" style="color:var(--gold);">Crear en Administración →</a>
+    </div>
+    {% endif %}
+
+    {% if not sy %}
+    <div style="padding:12px 14px;background:rgba(239,68,68,.08);border-top:1px solid rgba(239,68,68,.2);">
+      <span style="font-size:12px;color:#EF4444;">⚠ Sin año escolar activo.
+        <a href="{{ url_for('admin.index') }}" style="color:var(--gold);">Configurar →</a>
+      </span>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

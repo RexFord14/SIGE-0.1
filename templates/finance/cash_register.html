@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Caja Diaria{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+  <h1 class="font-display" style="font-size:22px;font-weight:700;color:#E2E8F0;margin:0;">Arqueo de Caja</h1>
+  <div style="font-size:13px;color:#475569;">Fecha: <span style="color:#E2E8F0;font-weight:600;">{{ today | replace("-","/") }}</span></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+  <div class="card" style="padding:20px;">
+    <div style="font-size:13px;font-weight:600;color:var(--gold);margin-bottom:16px;">ESTADO DE CAJA HOY</div>
+    {% if cash %}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div><div style="font-size:11px;color:#475569;margin-bottom:4px;">APERTURA</div><div style="font-size:20px;font-weight:700;color:#E2E8F0;">{{ cash.opening_amount | currency }}</div></div>
+      <div><div style="font-size:11px;color:#475569;margin-bottom:4px;">STATUS</div><div style="font-size:16px;font-weight:700;color:{% if cash.status=='ABIERTO' %}#10B981{% else %}#94A3B8{% endif %};">{{ cash.status }}</div></div>
+      <div><div style="font-size:11px;color:#475569;margin-bottom:4px;">EFECTIVO</div><div style="font-size:20px;font-weight:700;color:#10B981;">{{ cash.total_cash_in | currency }}</div></div>
+      <div><div style="font-size:11px;color:#475569;margin-bottom:4px;">TRANSFERENCIAS</div><div style="font-size:20px;font-weight:700;color:#60A5FA;">{{ cash.total_transfers | currency }}</div></div>
+    </div>
+    <div style="background:var(--surface-2);border-radius:8px;padding:12px;margin-bottom:16px;">
+      <div style="font-size:12px;color:#475569;margin-bottom:4px;">TOTAL RECAUDADO</div>
+      <div style="font-size:28px;font-weight:800;color:#C9A84C;font-family:'Syne',sans-serif;">{{ (cash.total_cash_in + cash.total_transfers) | currency }}</div>
+    </div>
+    {% if cash.status == 'ABIERTO' %}
+    <form method="POST">
+      <input type="hidden" name="action" value="close">
+      <label class="form-label">Monto en caja al cierre (Bs.)</label>
+      <input type="number" name="closing_amount" step="0.01" class="form-input" style="margin-bottom:12px;" required>
+      <button type="submit" class="btn-primary" style="width:100%;" onclick="return confirm('¿Cerrar caja?')"">Cerrar Caja</button>
+    </form>
+    {% else %}
+    <div style="color:#475569;font-size:13px;">Caja cerrada. Cierre: {{ cash.closing_amount | currency }}</div>
+    {% endif %}
+    {% else %}
+    <form method="POST">
+      <input type="hidden" name="action" value="open">
+      <label class="form-label">Monto inicial de apertura (Bs.)</label>
+      <input type="number" name="opening_amount" step="0.01" value="0" class="form-input" style="margin-bottom:16px;">
+      <button type="submit" class="btn-primary" style="width:100%;">Abrir Caja</button>
+    </form>
+    {% endif %}
+  </div>
+  <div class="card" style="padding:20px;">
+    <div style="font-size:13px;font-weight:600;color:var(--gold);margin-bottom:16px;">PAGOS DEL DÍA</div>
+    <div style="max-height:300px;overflow-y:auto;">
+    {% for p in payments_today %}
+    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+      <div><div style="font-size:13px;font-weight:500;">{{ p.student_name }}</div><div style="font-size:11px;color:#475569;">{{ p.payment_method }}</div></div>
+      <div style="color:#10B981;font-weight:600;font-size:14px;">{{ p.amount | currency }}</div>
+    </div>
+    {% else %}
+    <div style="color:#475569;text-align:center;padding:24px;">Sin pagos hoy</div>
+    {% endfor %}
+    </div>
+  </div>
+</div>
+<div class="card" style="overflow:hidden;">
+  <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-size:14px;font-weight:600;font-family:'Syne',sans-serif;">Historial de Cajas</div>
+  <table>
+    <thead><tr><th>Fecha</th><th>Apertura</th><th>Efectivo</th><th>Transferencias</th><th>Cierre</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for c in history %}
+      <tr>
+        <td style="font-weight:500;">{{ c.date | date_fmt }}</td>
+        <td>{{ c.opening_amount | currency }}</td>
+        <td style="color:#10B981;">{{ c.total_cash_in | currency }}</td>
+        <td style="color:#60A5FA;">{{ c.total_transfers | currency }}</td>
+        <td>{{ c.closing_amount | currency if c.closing_amount else "—" }}</td>
+        <td><span class="badge {% if c.status=='ABIERTO' %}badge-green{% else %}badge-gray{% endif %}">{{ c.status }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

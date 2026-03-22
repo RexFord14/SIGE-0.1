@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}Académico{% endblock %}
+{% block content %}
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+  <h1 class="font-display" style="font-size:22px;font-weight:700;color:#E2E8F0;margin:0;">Módulo Académico</h1>
+  <div style="display:flex;gap:8px;">
+    <a href="{{ url_for('academic.assign_section') }}" class="btn-primary" style="text-decoration:none;font-size:13px;">
+      + Asignar Sección
+    </a>
+    <a href="{{ url_for('academic.grades') }}" class="btn-secondary" style="text-decoration:none;font-size:13px;">
+      Cargar Notas
+    </a>
+    <a href="{{ url_for('academic.config') }}" class="btn-secondary" style="text-decoration:none;font-size:13px;">
+      ⚙ Config
+    </a>
+  </div>
+</div>
+
+{% if unassigned > 0 %}
+<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+  <span style="font-size:18px;">⚠</span>
+  <span style="font-size:13px;color:#F59E0B;">
+    <strong>{{ unassigned }}</strong> estudiante(s) sin sección asignada.
+    <a href="{{ url_for('academic.assign_section') }}" style="color:var(--gold);text-decoration:underline;">Asignar ahora →</a>
+  </span>
+</div>
+{% endif %}
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+  {# ══════════════ PRIMARIA ══════════════ #}
+  <div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <div style="width:4px;height:28px;background:var(--gold);border-radius:2px;"></div>
+      <h2 class="font-display" style="font-size:17px;font-weight:700;color:#E2E8F0;margin:0;">Educación Primaria</h2>
+      <span style="font-size:12px;color:#475569;">1° – 6° Grado</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% set primaria = primary %}
+      {% if primaria %}
+        {% for course in primaria %}
+        <div class="card" style="overflow:hidden;">
+          {# Header del grado #}
+          <div style="padding:10px 16px;background:rgba(201,168,76,.05);border-bottom:1px solid var(--border);
+                      display:flex;justify-content:space-between;align-items:center;cursor:pointer;"
+               onclick="toggleGrade('p{{ course.id }}')">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:15px;font-weight:800;color:var(--gold);font-family:'Syne',sans-serif;">{{ course.grade }}°</span>
+              <span style="font-size:13px;font-weight:600;color:#E2E8F0;">{{ course.name }}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:12px;color:#475569;">{{ course.num_students }} alumnos · {{ course.num_sections }} sección(es)</span>
+              <svg id="arrow_p{{ course.id }}" width="14" height="14" fill="none" stroke="#475569" stroke-width="2" viewBox="0 0 24 24"
+                style="transition:transform .2s;"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </div>
+
+          {# Secciones del grado #}
+          <div id="grade_p{{ course.id }}" style="display:none;">
+            {% for sec in lapsos %}{% endfor %}{# placeholder #}
+            <div style="padding:10px 16px;">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                {# Generamos secciones del curso con una macro #}
+                {% set ns = namespace(found=false) %}
+                <div style="width:100%;">
+                  <a href="{{ url_for('academic.grades') }}?section_id=&course_id={{ course.id }}"
+                     style="font-size:12px;color:var(--gold);text-decoration:none;">
+                    Ver notas de este grado →
+                  </a>
+                </div>
+              </div>
+              <div style="margin-top:8px;">
+                <a href="{{ url_for('academic.assign_section') }}"
+                   style="font-size:12px;color:#475569;text-decoration:none;padding:4px 10px;
+                          border:1px dashed var(--border);border-radius:6px;display:inline-block;">
+                  + Asignar estudiante a {{ course.name }}
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="card" style="padding:24px;text-align:center;color:#475569;font-size:13px;">
+          Sin grados de primaria configurados.
+          <a href="{{ url_for('admin.index') }}" style="color:var(--gold);">Crear en Administración →</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ══════════════ SECUNDARIA ══════════════ #}
+  <div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <div style="width:4px;height:28px;background:#60A5FA;border-radius:2px;"></div>
+      <h2 class="font-display" style="font-size:17px;font-weight:700;color:#E2E8F0;margin:0;">Educación Secundaria</h2>
+      <span style="font-size:12px;color:#475569;">1° – 5° Año</span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% if secondary %}
+        {% for course in secondary %}
+        <div class="card" style="overflow:hidden;">
+          <div style="padding:10px 16px;background:rgba(96,165,250,.05);border-bottom:1px solid var(--border);
+                      display:flex;justify-content:space-between;align-items:center;cursor:pointer;"
+               onclick="toggleGrade('s{{ course.id }}')">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:15px;font-weight:800;color:#60A5FA;font-family:'Syne',sans-serif;">{{ course.grade }}°</span>
+              <span style="font-size:13px;font-weight:600;color:#E2E8F0;">{{ course.name }}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:12px;color:#475569;">{{ course.num_students }} alumnos · {{ course.num_sections }} sección(es)</span>
+              <svg id="arrow_s{{ course.id }}" width="14" height="14" fill="none" stroke="#475569" stroke-width="2" viewBox="0 0 24 24"
+                style="transition:transform .2s;"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </div>
+
+          <div id="grade_s{{ course.id }}" style="display:none;padding:10px 16px;">
+            <div style="display:flex;gap:8px;">
+              <a href="{{ url_for('academic.grades') }}?course_id={{ course.id }}"
+                 class="btn-secondary" style="text-decoration:none;font-size:12px;padding:5px 12px;">
+                📝 Notas
+              </a>
+              <a href="{{ url_for('academic.attendance') }}"
+                 class="btn-secondary" style="text-decoration:none;font-size:12px;padding:5px 12px;">
+                ✓ Asistencia
+              </a>
+              <a href="{{ url_for('academic.assign_section') }}"
+                 style="font-size:12px;color:#475569;text-decoration:none;padding:5px 12px;
+                        border:1px dashed var(--border);border-radius:6px;">
+                + Asignar alumno
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="card" style="padding:24px;text-align:center;color:#475569;font-size:13px;">
+          Sin años de secundaria configurados.
+          <a href="{{ url_for('admin.index') }}" style="color:var(--gold);">Crear en Administración →</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{# ── INFO LAPSOS Y CONFIG ── #}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;">
+  <div class="card" style="padding:16px;">
+    <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:10px;">LAPSOS ACTIVOS</div>
+    {% for l in lapsos %}
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;">
+      <span style="color:#E2E8F0;">{{ l.name }}</span>
+      <span style="color:#475569;">{{ l.start_date }} → {{ l.end_date }}</span>
+    </div>
+    {% else %}
+    <div style="color:#475569;font-size:13px;">Sin lapsos configurados</div>
+    {% endfor %}
+    <div style="margin-top:8px;">
+      <a href="{{ url_for('academic.config') }}" style="font-size:12px;color:var(--gold);text-decoration:none;">
+        Configurar evaluación →
+      </a>
+    </div>
+  </div>
+
+  <div class="card" style="padding:16px;">
+    <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:10px;">ACCESOS RÁPIDOS</div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <a href="{{ url_for('academic.grades') }}" class="btn-secondary" style="text-decoration:none;font-size:13px;text-align:center;">📝 Cargar Notas por Sección</a>
+      <a href="{{ url_for('academic.attendance') }}" class="btn-secondary" style="text-decoration:none;font-size:13px;text-align:center;">✓ Registrar Asistencia</a>
+      <a href="{{ url_for('academic.assign_section') }}" class="btn-secondary" style="text-decoration:none;font-size:13px;text-align:center;">🎓 Asignar Sección a Estudiante</a>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleGrade(id) {
+  var el    = document.getElementById('grade_' + id);
+  var arrow = document.getElementById('arrow_' + id);
+  var open  = el.style.display !== 'none';
+  el.style.display    = open ? 'none' : 'block';
+  arrow.style.transform = open ? '' : 'rotate(180deg)';
+}
+</script>
+{% endblock %}
