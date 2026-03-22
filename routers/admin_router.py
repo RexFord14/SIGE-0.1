@@ -171,14 +171,23 @@ def new_lapso():
 @permission_required("admin", "edit")
 def delete_lapso(lid):
     with db() as conn:
-        has_grades = conn.execute(
-            "SELECT COUNT(*) as n FROM grades WHERE lapso_id=?", (lid,)
-        ).fetchone()["n"]
-        if has_grades:
-            flash("No se puede eliminar: tiene notas registradas", "error")
-        else:
-            conn.execute("DELETE FROM lapsos WHERE id=?", (lid,))
-            flash("Lapso eliminado", "success")
+        try:
+            # Verificar si tiene notas
+            has_grades = conn.execute(
+                "SELECT COUNT(*) as n FROM grades WHERE lapso_id=?", (lid,)
+            ).fetchone()["n"]
+
+            if has_grades:
+                flash("No se puede eliminar: el lapso tiene notas registradas.", "error")
+            else:
+                # Importante: Si no tiene notas, eliminamos su plan de evaluación primero
+                conn.execute("DELETE FROM activity_types WHERE lapso_id=?", (lid,))
+                # Luego eliminamos el lapso
+                conn.execute("DELETE FROM lapsos WHERE id=?", (lid,))
+                flash("Lapso eliminado correctamente.", "success")
+        except Exception as e:
+            flash(f"Error inesperado al eliminar: {str(e)}", "error")
+            
     return redirect(url_for("admin.index") + "#lapsos")
 
 
@@ -188,14 +197,36 @@ def delete_lapso(lid):
 @login_required
 @permission_required("admin", "edit")
 def new_course():
-    name  = request.form.get("name", "").strip()
-    level = request.form.get("level", "SECONDARY")
-    grade = int(request.form.get("grade", 1))
-    if not name:
-        flash("El nombre es obligatorio", "error")
-        return redirect(url_for("admin.index") + "#courses")
+    level = request.form.get("level", "PRIMARY")
+    try:
+        grade = int(request.form.get("grade", 1))
+    except ValueError:
+        grade = 1
+
+    if level == "PRIMARY":
+        suffixes = ["1er", "2do", "3er", "4to", "5to", "6to"]
+        if grade < 1 or grade > 6:
+            flash("Grado inválido para Primaria", "error")
+            return redirect(url_for("admin.index") + "#courses")
+        name = f"{suffixes[grade-1]} Grado"
+    else:
+        suffixes = ["1er", "2do", "3er", "4to", "5to"]
+        if grade < 1 or grade > 5:
+            flash("Año inválido para Secundaria", "error")
+            return redirect(url_for("admin.index") + "#courses")
+        name = f"{suffixes[grade-1]} Año"
+
     with db() as conn:
         try:
+            # Verificar si ya existe este curso
+            exists = conn.execute(
+                "SELECT COUNT(*) as n FROM courses WHERE level=? AND grade=?", (level, grade)
+            ).fetchone()["n"]
+            
+            if exists > 0:
+                flash(f"El curso '{name}' ya existe en el sistema.", "error")
+                return redirect(url_for("admin.index") + "#courses")
+
             conn.execute(
                 "INSERT INTO courses(name,level,grade) VALUES(?,?,?)",
                 (name, level, grade)
@@ -209,6 +240,45 @@ def new_course():
 
 
 # ── MATERIAS ──────────────────────────────────────────────────────────────────
+
+@bp.route("/curso/<int:cid>/delete", methods=["POST"])
+@login_required
+@permission_required("admin", "edit")
+def delete_course(cid):
+    pin = request.form.get("delete_pin", "")
+    
+    with db() as conn:
+        setting = conn.execute("SELECT value FROM system_settings WHERE key='security_pin_hash'").fetchone()
+        from werkzeug.security import check_password_hash
+        if not setting or not check_password_hash(setting["value"], pin):
+            flash("PIN incorrecto para eliminar curso", "error")
+            return redirect(url_for("admin.index") + "#courses")
+            
+        course = conn.execute("SELECT name FROM courses WHERE id=?", (cid,)).fetchone()
+        if not course:
+            flash("Curso no encontrado", "error")
+            return redirect(url_for("admin.index") + "#courses")
+            
+        # Verificar si hay estudiantes inscritos
+        students = conn.execute("""
+            SELECT COUNT(*) as n FROM students s
+            JOIN sections sec ON sec.id=s.section_id
+            WHERE sec.course_id=?
+        """, (cid,)).fetchone()["n"]
+        
+        if students > 0:
+            flash(f"No se puede eliminar: el curso {course['name']} tiene {students} estudiante(s) inscrito(s).", "error")
+            return redirect(url_for("admin.index") + "#courses")
+            
+        # Borrado en cascada (seguro porque no hay estudiantes)
+        conn.execute("DELETE FROM activity_types WHERE subject_id IN (SELECT id FROM subjects WHERE course_id=?)", (cid,))
+        conn.execute("DELETE FROM subjects WHERE course_id=?", (cid,))
+        conn.execute("DELETE FROM sections WHERE course_id=?", (cid,))
+        conn.execute("DELETE FROM courses WHERE id=?", (cid,))
+        
+        flash(f"Curso {course['name']} eliminado correctamente.", "success")
+        
+    return redirect(url_for("admin.index") + "#courses")
 
 @bp.route("/materia/nueva", methods=["POST"])
 @login_required

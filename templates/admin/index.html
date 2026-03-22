@@ -161,23 +161,21 @@
     <div class="card" style="padding:20px;">
       <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:14px;">NUEVO GRADO / ANO</div>
       <form method="POST" action="{{ url_for('admin.new_course') }}">
-        <div style="margin-bottom:10px;"><label class="form-label">Nombre</label>
-          <input type="text" name="name" class="form-input" placeholder="ej: 1er Ano" required></div>
         <div style="margin-bottom:10px;"><label class="form-label">Nivel</label>
-          <select name="level" class="form-input" required>
+          <select name="level" id="course_level_select" class="form-input" required onchange="updateGradeOptions()">
             <option value="PRIMARY">Primaria</option>
             <option value="SECONDARY">Secundaria</option>
           </select></div>
-        <div style="margin-bottom:14px;"><label class="form-label">Numero de grado</label>
-          <select name="grade" class="form-input" required>
-            {% for n in range(1,7) %}<option value="{{ n }}">{{ n }}</option>{% endfor %}
+        <div style="margin-bottom:14px;"><label class="form-label">Numero de grado/ano</label>
+          <select name="grade" id="course_grade_select" class="form-input" required>
+            <!-- Las opciones se generan por JS -->
           </select></div>
         <button type="submit" class="btn-primary" style="width:100%;">Crear (agrega materias automaticamente)</button>
       </form>
     </div>
     <div class="card" style="overflow:hidden;">
       <table>
-        <thead><tr><th>Nombre</th><th>Nivel</th><th>Materias</th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Nivel</th><th>Materias</th><th>Acciones</th></tr></thead>
         <tbody>
           {% for c in courses %}
           <tr>
@@ -185,9 +183,16 @@
             <td><span class="badge {% if c.level=='PRIMARY' %}badge-green{% else %}badge-blue{% endif %}" style="font-size:11px;">
               {{ 'Primaria' if c.level=='PRIMARY' else 'Secundaria' }}</span></td>
             <td style="font-size:12px;color:#94A3B8;">{{ c.num_subjects }} materia(s)</td>
+            <td>
+              <form method="POST" action="{{ url_for('admin.delete_course', cid=c.id) }}" style="display:flex;gap:4px;" onsubmit="return confirm('¿Estás seguro de que quieres eliminar este curso y todas sus materias asignadas? (Solo es posible si no tiene alumnos)')">
+                <input type="password" name="delete_pin" placeholder="PIN" minlength="4" required
+                       class="form-input" style="width:60px;padding:4px;font-size:11px;text-align:center;">
+                <button type="submit" class="btn-danger" style="font-size:11px;padding:4px 9px;">Eliminar</button>
+              </form>
+            </td>
           </tr>
           {% else %}
-          <tr><td colspan="3" style="text-align:center;padding:20px;color:#475569;">Sin cursos</td></tr>
+          <tr><td colspan="4" style="text-align:center;padding:20px;color:#475569;">Sin cursos</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -238,6 +243,22 @@
 </div>
 
 <script>
+function updateGradeOptions() {
+  var levelSelect = document.getElementById('course_level_select');
+  var gradeSelect = document.getElementById('course_grade_select');
+  if(!levelSelect || !gradeSelect) return;
+  var level = levelSelect.value;
+  var maxGrade = level === 'PRIMARY' ? 6 : 5;
+  gradeSelect.innerHTML = '';
+  for(var i = 1; i <= maxGrade; i++) {
+    var opt = document.createElement('option');
+    opt.value = i;
+    opt.innerHTML = i;
+    gradeSelect.appendChild(opt);
+  }
+}
+document.addEventListener("DOMContentLoaded", updateGradeOptions);
+
 function showTab(id) {
   document.querySelectorAll('.tab-content').forEach(function(el){ el.style.display='none'; });
   document.querySelectorAll('[id^="tab_btn_"]').forEach(function(btn){

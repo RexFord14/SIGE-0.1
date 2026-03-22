@@ -350,33 +350,35 @@ def delete_student(sid: int):
             flash("Estudiante no encontrado", "error")
             return redirect(url_for("students.index"))
 
-        # Verificar dependencias contables
-        inv_count = conn.execute(
-            "SELECT COUNT(*) as n FROM invoices WHERE student_id=?", (sid,)
-        ).fetchone()["n"]
-        if inv_count > 0:
-            flash(
-                f"No se puede eliminar: {student['first_name']} tiene "
-                f"{inv_count} factura(s) registrada(s). Use estado RETIRADO.",
-                "error"
-            )
-            return redirect(url_for("students.detail", sid=sid))
-
-        grades_count = conn.execute(
-            "SELECT COUNT(*) as n FROM grades WHERE student_id=?", (sid,)
-        ).fetchone()["n"]
-        if grades_count > 0:
-            flash(
-                f"No se puede eliminar: {student['first_name']} tiene "
-                f"{grades_count} nota(s) registrada(s). Use estado RETIRADO.",
-                "error"
-            )
-            return redirect(url_for("students.detail", sid=sid))
-
         name = f"{student['first_name']} {student['last_name']}"
 
-        # Limpiar dependencias sin impacto contable
+        # Limpiar dependencias en cascada para forzar la eliminación sin huérfanos
         conn.execute("DELETE FROM attendance WHERE student_id=?", (sid,))
+        conn.execute("DELETE FROM grades WHERE student_id=?", (sid,))
+        
+        # Obtener facturas para borrar sus dependencias
+        invoices = conn.execute("SELECT id FROM invoices WHERE student_id=?", (sid,)).fetchall()
+        invoice_ids = [inv["id"] for inv in invoices]
+        
+        if invoice_ids:
+            placeholders = ",".join("?" * len(invoice_ids))
+            
+            # Extraer IDs de pagos asociados a esas facturas
+            payments = conn.execute(f"SELECT id FROM payments WHERE invoice_id IN ({placeholders})", invoice_ids).fetchall()
+            payment_ids = [p["id"] for p in payments]
+            
+            if payment_ids:
+                p_placeholders = ",".join("?" * len(payment_ids))
+                try: # payment_images and bank_reconciliation exist in v1.1
+                    conn.execute(f"DELETE FROM payment_images WHERE payment_id IN ({p_placeholders})", payment_ids)
+                except Exception:
+                    pass
+                conn.execute(f"DELETE FROM bank_reconciliation WHERE payment_id IN ({p_placeholders})", payment_ids)
+                conn.execute(f"DELETE FROM payments WHERE id IN ({p_placeholders})", payment_ids)
+            
+            # Eliminar las facturas
+            conn.execute(f"DELETE FROM invoices WHERE id IN ({placeholders})", invoice_ids)
+
         conn.execute("DELETE FROM students WHERE id=?", (sid,))
 
         audit(conn, "DELETE", "students", "students", sid,
